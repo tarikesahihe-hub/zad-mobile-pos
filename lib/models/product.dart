@@ -15,6 +15,8 @@ class Product {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  double get price => salePrice;
+
   Product({
     this.id,
     required this.name,
