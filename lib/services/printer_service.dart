@@ -3,88 +3,44 @@ import 'dart:typed_data';
 import '../models/sale.dart';
 
 /// ═══════════════════════════════════════════════════════════════
-/// Printer Service
-/// يدعم:
-/// - USB
-/// - Network
-/// - Bluetooth (مستقبلاً)
-/// - حفظ PDF (مستقبلاً)
+/// Printer Service - Network ESC/POS thermal printer support
 /// ═══════════════════════════════════════════════════════════════
 
-enum PrinterType {
-  usb,
-  network,
-  bluetooth,
-}
-
-class PrinterConfig {
-  final PrinterType type;
-  final String address;
-  final int port;
-
-  const PrinterConfig({
-    required this.type,
-    required this.address,
-    this.port = 9100,
-  });
-}
-
 class PrinterService {
-  static final PrinterService instance = PrinterService._();
+  Socket? _socket;
 
-  PrinterService._();
-
-  PrinterConfig? _config;
-
-  void configure(PrinterConfig config) {
-    _config = config;
-  }
-
-  Future<bool> printSale(Sale sale) async {
-    if (_config == null) {
-      throw Exception('Printer not configured');
-    }
-
-    switch (_config!.type) {
-      case PrinterType.network:
-        return await _printNetwork(sale);
-
-      case PrinterType.usb:
-        return await _printUsb(sale);
-
-      case PrinterType.bluetooth:
-        return await _printBluetooth(sale);
-    }
-  }
-
-  Future<bool> _printNetwork(Sale sale) async {
+  Future<bool> connect(String ip, {int port = 9100}) async {
     try {
-      final socket = await Socket.connect(
-        _config!.address,
-        _config!.port,
+      _socket = await Socket.connect(
+        ip,
+        port,
         timeout: const Duration(seconds: 5),
       );
-
-      socket.add(_buildReceipt(sale));
-      await socket.flush();
-      await socket.close();
-
       return true;
     } catch (_) {
+      _socket = null;
       return false;
     }
   }
 
-  Future<bool> _printUsb(Sale sale) async {
-    // TODO:
-    // تنفيذ USB باستخدام esc_pos_usb أو أي مكتبة مناسبة
-    return false;
+  Future<void> disconnect() async {
+    try {
+      await _socket?.flush();
+      await _socket?.close();
+    } catch (_) {
+      // ignore
+    } finally {
+      _socket = null;
+    }
   }
 
-  Future<bool> _printBluetooth(Sale sale) async {
-    // TODO:
-    // تنفيذ Bluetooth
-    return false;
+  Future<void> printSaleReceipt(Sale sale) async {
+    final socket = _socket;
+    if (socket == null) {
+      throw Exception('الطابعة غير متصلة');
+    }
+    socket.add(_buildReceipt(sale));
+    await socket.flush();
   }
 
   Uint8List _buildReceipt(Sale sale) {
@@ -93,22 +49,31 @@ class PrinterService {
     bytes.add(_textCenter('*** ZAD POS ***'));
     bytes.add(_line());
 
-    bytes.add(_text('Invoice: ${sale.id}'));
-    bytes.add(_text('Date: ${sale.date}'));
+    bytes.add(_text('فاتورة: ${sale.invoiceNumber}'));
+    bytes.add(_text('التاريخ: ${sale.date}'));
 
     bytes.add(_line());
 
     for (final item in sale.items) {
       bytes.add(
         _text(
-          '${item.productName} x${item.quantity}  ${item.total}',
+          '${item.productName} x${item.quantity}  ${item.total.toStringAsFixed(2)}',
         ),
       );
-    }    bytes.add(_line());
+    }
+
+    bytes.add(_line());
+
+    if (sale.discount > 0) {
+      bytes.add(_text('الخصم: ${sale.discount.toStringAsFixed(2)} د.ج'));
+    }
+    if (sale.tax > 0) {
+      bytes.add(_text('الضريبة: ${sale.tax.toStringAsFixed(2)} د.ج'));
+    }
 
     bytes.add(
       _textBold(
-        'TOTAL: ${sale.total.toStringAsFixed(2)}',
+        'الإجمالي: ${sale.total.toStringAsFixed(2)} د.ج',
       ),
     );
 

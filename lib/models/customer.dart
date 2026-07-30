@@ -1,46 +1,68 @@
 class Customer {
-  final String? id;
+  final int? id;
   final String name;
   final String? phone;
-  final double debt;
+  final String? email;
+  final String? address;
+  final double balance;
+  final int loyaltyPoints;
+  final DateTime createdAt;
 
   Customer({
     this.id,
     required this.name,
     this.phone,
-    this.debt = 0.0,
+    this.email,
+    this.address,
+    this.balance = 0.0,
+    this.loyaltyPoints = 0,
+    required this.createdAt,
   });
 
-  // دالة النسخ والتحديث لتفادي خطأ copyWith
   Customer copyWith({
-    String? id,
+    int? id,
     String? name,
     String? phone,
-    double? debt,
+    String? email,
+    String? address,
+    double? balance,
+    int? loyaltyPoints,
+    DateTime? createdAt,
   }) {
     return Customer(
       id: id ?? this.id,
       name: name ?? this.name,
       phone: phone ?? this.phone,
-      debt: debt ?? this.debt,
+      email: email ?? this.email,
+      address: address ?? this.address,
+      balance: balance ?? this.balance,
+      loyaltyPoints: loyaltyPoints ?? this.loyaltyPoints,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
-  factory Customer.fromJson(Map<String, dynamic> json) {
-    return Customer(
-      id: json['id'],
-      name: json['name'] ?? '',
-      phone: json['phone'],
-      debt: (json['debt'] as num?)?.toDouble() ?? 0.0,
-    );
-  }
+  factory Customer.fromMap(Map<String, dynamic> map) => Customer(
+    id: map['id'],
+    name: map['name'] ?? '',
+    phone: map['phone'],
+    email: map['email'],
+    address: map['address'],
+    balance: map['balance']?.toDouble() ?? 0.0,
+    loyaltyPoints: map['loyalty_points'] ?? 0,
+    createdAt: DateTime.parse(map['created_at']),
+  );
 
-  Map<String, dynamic> toJson() {
-    return {
-      if (id != null) 'id': id,
-      'name': name,
-      if (phone != null) 'phone': phone,
-      'debt': debt,
-    };
-  }
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'name': name,
+    'phone': phone,
+    'email': email,
+    'address': address,
+    'balance': balance,
+    'loyalty_points': loyaltyPoints,
+    'created_at': createdAt.toIso8601String(),
+  };
+
+  factory Customer.fromJson(Map<String, dynamic> json) => Customer.fromMap(json);
+  Map<String, dynamic> toJson() => toMap();
 }

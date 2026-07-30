@@ -20,7 +20,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadBackups() async {
-    final backups = await BackupService().getBackupFiles();
+    final backups = await BackupService().listBackups();
     setState(() {
       _backups = backups;
     });
