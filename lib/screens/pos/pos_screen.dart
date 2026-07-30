@@ -67,7 +67,7 @@ class _PosScreenState extends State<PosScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              final sale = await pos.completeSale();
+              final sale = await pos.checkout();
               if (mounted && sale != null) {
                 Navigator.pop(context);
                 Navigator.push(
