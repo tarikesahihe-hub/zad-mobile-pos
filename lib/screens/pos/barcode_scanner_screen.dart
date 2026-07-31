@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 class BarcodeScannerScreen extends StatefulWidget {
-  final Function(String code) onScan;
+  final Function(String code)? onScan;
 
-  const BarcodeScannerScreen({Key? key, required this.onScan}) : super(key: key);
+  const BarcodeScannerScreen({Key? key, this.onScan}) : super(key: key);
 
   @override
   State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
@@ -13,23 +13,25 @@ class BarcodeScannerScreen extends StatefulWidget {
 
 class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   final MobileScannerController controller = MobileScannerController();
-  final AudioPlayer audioPlayer = AudioPlayer();
   bool isCooldown = false;
 
   void _handleBarcode(String code) async {
     if (isCooldown) return;
     setState(() => isCooldown = true);
 
-    // تشغيل رنة تنبيه عند المسح الناجح
-    try {
-      // يمكنك استخدام رابط صوت تنبيه قصير أو ملف محلي إذا متوفر
-      await audioPlayer.play(AssetSource('sounds/beep.mp3'));
-    } catch (_) {
-      // إذا لم يتوفر ملف صوتي محلي، يمكن الاعتماد على النظام
+    // 1. إطلاق صوت تنبيه واهتزاز خفيف عبر النظام الافتراضي
+    SystemSound.play(SystemSoundType.click);
+    HapticFeedback.mediumImpact();
+
+    // 2. إرسال الكود
+    if (widget.onScan != null) {
+      widget.onScan!(code);
+    } else {
+      Navigator.pop(context, code);
+      return;
     }
 
-    widget.onScan(code);
-
+    // 3. تأخير بسيط (700ms) لمنع التكرار
     await Future.delayed(const Duration(milliseconds: 700));
     if (mounted) {
       setState(() => isCooldown = false);
@@ -39,7 +41,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   @override
   void dispose() {
     controller.dispose();
-    audioPlayer.dispose();
     super.dispose();
   }
 
@@ -47,7 +48,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('المسح المستمر مع الرنة'),
+        title: const Text('المسح المستمر'),
         actions: [
           IconButton(
             icon: ValueListenableBuilder(
