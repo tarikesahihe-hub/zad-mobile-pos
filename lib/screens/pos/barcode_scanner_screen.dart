@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:vibration/vibration.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class BarcodeScannerScreen extends StatefulWidget {
   final Function(String code) onScan;
@@ -13,24 +13,24 @@ class BarcodeScannerScreen extends StatefulWidget {
 
 class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   final MobileScannerController controller = MobileScannerController();
+  final AudioPlayer audioPlayer = AudioPlayer();
   bool isCooldown = false;
 
   void _handleBarcode(String code) async {
     if (isCooldown) return;
     setState(() => isCooldown = true);
 
-    // اهتزاز وتأكيد مسح المنتج
+    // تشغيل رنة تنبيه عند المسح الناجح
     try {
-      if (await Vibration.hasVibrator() ?? false) {
-        Vibration.vibrate(duration: 100);
-      }
-    } catch (_) {}
+      // يمكنك استخدام رابط صوت تنبيه قصير أو ملف محلي إذا متوفر
+      await audioPlayer.play(AssetSource('sounds/beep.mp3'));
+    } catch (_) {
+      // إذا لم يتوفر ملف صوتي محلي، يمكن الاعتماد على النظام
+    }
 
-    // إرسال المنتج مباشرة للسلّة دون إغلاق الشاشة
     widget.onScan(code);
 
-    // مهلة نصف ثانية قبل قراءة المنتج التالي لتفادي التكرار المزدوج
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 700));
     if (mounted) {
       setState(() => isCooldown = false);
     }
@@ -39,6 +39,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   @override
   void dispose() {
     controller.dispose();
+    audioPlayer.dispose();
     super.dispose();
   }
 
@@ -46,7 +47,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('المسح المتتالي المستمر'),
+        title: const Text('المسح المستمر مع الرنة'),
         actions: [
           IconButton(
             icon: ValueListenableBuilder(
@@ -68,8 +69,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
             onDetect: (capture) {
               final List<Barcode> barcodes = capture.barcodes;
               for (final barcode in barcodes) {
-                if (barcode.rawValue != null) {
-                  _handleBarcode(barcode.rawValue!);
+                final String? rawValue = barcode.rawValue;
+                if (rawValue != null && rawValue.isNotEmpty) {
+                  _handleBarcode(rawValue);
                   break;
                 }
               }
@@ -77,31 +79,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
           ),
           Center(
             child: Container(
-              width: 260,
-              height: 160,
+              width: 250,
+              height: 150,
               decoration: BoxDecoration(
                 border: Border.all(
                   color: isCooldown ? Colors.amber : Colors.greenAccent,
                   width: 3,
                 ),
                 borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 30,
-            left: 20,
-            right: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                'مرر المنتجات تباعاً دون توقف...',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 16),
               ),
             ),
           ),
