@@ -3,9 +3,9 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:vibration/vibration.dart';
 
 class BarcodeScannerScreen extends StatefulWidget {
-  final Function(String code)? onScan;
+  final Function(String code) onScan;
 
-  const BarcodeScannerScreen({Key? key, this.onScan}) : super(key: key);
+  const BarcodeScannerScreen({Key? key, required this.onScan}) : super(key: key);
 
   @override
   State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
@@ -19,20 +19,18 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     if (isCooldown) return;
     setState(() => isCooldown = true);
 
-    // 1. اهتزاز لتأكيد المسح
-    if (await Vibration.hasVibrator() ?? false) {
-      Vibration.vibrate(duration: 80);
-    }
+    // اهتزاز وتأكيد مسح المنتج
+    try {
+      if (await Vibration.hasVibrator() ?? false) {
+        Vibration.vibrate(duration: 100);
+      }
+    } catch (_) {}
 
-    // 2. إرسال الكود الممسوح للواجهة الرئيسية/السلة
-    if (widget.onScan != null) {
-      widget.onScan!(code);
-    } else {
-      Navigator.pop(context, code);
-    }
+    // إرسال المنتج مباشرة للسلّة دون إغلاق الشاشة
+    widget.onScan(code);
 
-    // 3. تأخير بسيط (ثانية واحدة) لتفادي تكرار مسح نفس الكود بالخطأ فوراً
-    await Future.delayed(const Duration(seconds: 1));
+    // مهلة نصف ثانية قبل قراءة المنتج التالي لتفادي التكرار المزدوج
+    await Future.delayed(const Duration(milliseconds: 600));
     if (mounted) {
       setState(() => isCooldown = false);
     }
@@ -48,7 +46,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('قارئ الباركود المستمر'),
+        title: const Text('المسح المتتالي المستمر'),
         actions: [
           IconButton(
             icon: ValueListenableBuilder(
@@ -60,19 +58,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
               },
             ),
             onPressed: () => controller.toggleTorch(),
-          ),
-          IconButton(
-            icon: ValueListenableBuilder(
-              valueListenable: controller.cameraFacingState,
-              builder: (context, state, child) {
-                return Icon(
-                  state == CameraFacing.front
-                      ? Icons.camera_front
-                      : Icons.camera_rear,
-                );
-              },
-            ),
-            onPressed: () => controller.switchCamera(),
           ),
         ],
       ),
@@ -108,15 +93,15 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
             left: 20,
             right: 20,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               decoration: BoxDecoration(
                 color: Colors.black87,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Text(
-                'مرر المنتجات تباعاً أمام الكاميرا...',
+                'مرر المنتجات تباعاً دون توقف...',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 15),
+                style: TextStyle(color: Colors.white, fontSize: 16),
               ),
             ),
           ),
