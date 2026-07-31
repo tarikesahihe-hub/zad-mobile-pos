@@ -42,5 +42,3 @@ flutter:
   uses-material-design: true
   generate: true
 
-dependency_overrides:
-  sqflite_android: 2.3.0
