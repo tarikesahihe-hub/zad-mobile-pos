@@ -76,6 +76,13 @@ class PrinterService {
         'الإجمالي: ${sale.total.toStringAsFixed(2)} د.ج',
       ),
     );
+    bytes.add(_text('المدفوع: ${sale.amountPaid.toStringAsFixed(2)} د.ج'));
+    if (sale.changeDue > 0) {
+      bytes.add(_text('الباقي: ${sale.changeDue.toStringAsFixed(2)} د.ج'));
+    }
+    if (sale.paymentMethod == 'credit' && (sale.total - sale.amountPaid) > 0) {
+      bytes.add(_text('متبقي كدين: ${(sale.total - sale.amountPaid).toStringAsFixed(2)} د.ج'));
+    }
 
     bytes.add(_line());
 

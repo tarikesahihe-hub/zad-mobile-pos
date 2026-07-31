@@ -7,7 +7,6 @@ environment:
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
-  vibration: ^3.1.2
   flutter:
     sdk: flutter
   flutter_localizations:
@@ -37,7 +36,7 @@ dependencies:
   google_fonts: ^6.1.0
   uuid: ^4.2.1
   device_info_plus: ^9.1.2
-  package_info_plus: ^8.0.0
+  package_info_plus: ^5.0.1
 
 flutter:
   uses-material-design: true

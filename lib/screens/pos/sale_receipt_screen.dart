@@ -3,6 +3,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../models/sale.dart';
 import '../../services/printer_service.dart';
 import '../../services/database_service.dart';
+import '../invoices/invoice_edit_screen.dart';
 
 class SaleReceiptScreen extends StatelessWidget {
   final Sale sale;
@@ -15,6 +16,19 @@ class SaleReceiptScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('فاتورة المبيعات'),
         actions: [
+          if (sale.id != null)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              tooltip: 'تعديل الفاتورة',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => InvoiceEditScreen(saleId: sale.id!),
+                  ),
+                );
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.print),
             onPressed: () => _printReceipt(context),
@@ -83,6 +97,24 @@ class SaleReceiptScreen extends StatelessWidget {
                       _buildTotalRow('الضريبة:', sale.tax),
                     const Divider(),
                     _buildTotalRow('الإجمالي:', sale.total, isBold: true),
+                    const SizedBox(height: 8),
+                    _buildTotalRow('المبلغ المدفوع:', sale.amountPaid),
+                    if (sale.changeDue > 0)
+                      _buildTotalRow('الباقي للزبون:', sale.changeDue, isDiscount: false),
+                    if (sale.paymentMethod == 'credit' && (sale.total - sale.amountPaid) > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('المتبقي كدين:', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                            Text(
+                              '${(sale.total - sale.amountPaid).toStringAsFixed(2)} د.ج',
+                              style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
                     const SizedBox(height: 16),
 
                     // Payment
@@ -228,6 +260,11 @@ class SaleReceiptScreen extends StatelessWidget {
     if (sale.discount > 0) buffer.writeln('الخصم: ${sale.discount.toStringAsFixed(2)} د.ج');
     if (sale.tax > 0) buffer.writeln('الضريبة: ${sale.tax.toStringAsFixed(2)} د.ج');
     buffer.writeln('الإجمالي: ${sale.total.toStringAsFixed(2)} د.ج');
+    buffer.writeln('المبلغ المدفوع: ${sale.amountPaid.toStringAsFixed(2)} د.ج');
+    if (sale.changeDue > 0) buffer.writeln('الباقي للزبون: ${sale.changeDue.toStringAsFixed(2)} د.ج');
+    if (sale.paymentMethod == 'credit' && (sale.total - sale.amountPaid) > 0) {
+      buffer.writeln('المتبقي كدين: ${(sale.total - sale.amountPaid).toStringAsFixed(2)} د.ج');
+    }
     buffer.writeln('طريقة الدفع: ${_getPaymentMethodName(sale.paymentMethod)}');
     buffer.writeln('شكراً لزيارتكم - ZAD Mobile POS');
 

@@ -50,6 +50,8 @@ class Sale {
   final double discount;
   final double tax;
   final double total;
+  final double amountPaid;
+  final double changeDue;
   final String paymentMethod;
   final int? customerId;
   final String? customerName;
@@ -66,6 +68,8 @@ class Sale {
     this.discount = 0,
     this.tax = 0,
     this.total = 0,
+    this.amountPaid = 0,
+    this.changeDue = 0,
     this.paymentMethod = 'cash',
     this.customerId,
     this.customerName,
@@ -83,6 +87,8 @@ class Sale {
     discount: map['discount']?.toDouble() ?? 0.0,
     tax: map['tax']?.toDouble() ?? 0.0,
     total: map['total']?.toDouble() ?? 0.0,
+    amountPaid: map['amount_paid']?.toDouble() ?? 0.0,
+    changeDue: map['change_due']?.toDouble() ?? 0.0,
     paymentMethod: map['payment_method'] ?? 'cash',
     customerId: map['customer_id'],
     customerName: map['customer_name'],
@@ -99,6 +105,8 @@ class Sale {
     'discount': discount,
     'tax': tax,
     'total': total,
+    'amount_paid': amountPaid,
+    'change_due': changeDue,
     'payment_method': paymentMethod,
     'customer_id': customerId,
     'customer_name': customerName,

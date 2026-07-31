@@ -27,7 +27,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -66,6 +66,8 @@ class DatabaseService {
         tax REAL NOT NULL DEFAULT 0,
         total REAL NOT NULL DEFAULT 0,
         payment_method TEXT DEFAULT 'cash',
+        amount_paid REAL NOT NULL DEFAULT 0,
+        change_due REAL NOT NULL DEFAULT 0,
         customer_id INTEGER,
         customer_name TEXT,
         notes TEXT,
@@ -293,6 +295,10 @@ class DatabaseService {
       ''');
       await _insertDefaultPermissions(db);
     }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE sales ADD COLUMN amount_paid REAL NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE sales ADD COLUMN change_due REAL NOT NULL DEFAULT 0');
+    }
   }
 
   Future<void> _insertDefaultPermissions(Database db) async {
@@ -513,6 +519,16 @@ class DatabaseService {
   Future<void> cancelSale(int saleId) async {
     final db = await database;
     await db.update('sales', {'status': 'cancelled'}, where: 'id = ?', whereArgs: [saleId]);
+  }
+
+  Future<void> updateSale(Sale sale) async {
+    final db = await database;
+    await db.update('sales', sale.toMap(), where: 'id = ?', whereArgs: [sale.id]);
+  }
+
+  Future<void> deleteSaleItemsBySale(int saleId) async {
+    final db = await database;
+    await db.delete('sale_items', where: 'sale_id = ?', whereArgs: [saleId]);
   }
 
   // ========== CUSTOMERS ==========
