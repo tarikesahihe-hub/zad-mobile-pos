@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 /// Barcode scanner screen.
 ///
 /// If [onScan] is provided, the scanner works in CONTINUOUS mode: it never
-/// closes itself after a successful read. Instead it plays a short beep,
-/// flashes the scan frame orange, sends the code to [onScan], and keeps
-/// scanning (with a short cooldown to avoid double-reads of the same item).
+/// closes itself after a successful read. Instead it plays the custom scan
+/// tone, vibrates, flashes the scan frame orange, sends the code to
+/// [onScan], and keeps scanning.
+///
+/// Re-scanning the SAME barcode only counts once it has actually left the
+/// camera frame and come back into view (edge-triggered), not just after a
+/// fixed time delay — so holding the same product in front of the camera
+/// will not add it twice.
 ///
 /// If [onScan] is null, it falls back to the old single-shot behavior:
 /// the first successful scan pops the screen with the barcode value.
@@ -22,62 +28,117 @@ class BarcodeScannerScreen extends StatefulWidget {
 
 class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
   bool _torchOn = false;
-  bool _cooldown = false;
   bool _flashFrame = false;
-  String? _lastCode;
-  DateTime? _lastScanTime;
+  String? _errorMessage;
 
-  static const _cooldownDuration = Duration(milliseconds: 700);
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  // Codes currently visible in the camera frame (this detection cycle).
+  Set<String> _codesInFrame = {};
+  // Codes that are "armed" to fire again once they leave frame + return.
+  final Set<String> _consumedUntilGone = {};
 
   bool get _isContinuous => widget.onScan != null;
 
+  @override
+  void initState() {
+    super.initState();
+    _audioPlayer.setReleaseMode(ReleaseMode.stop);
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _playScanFeedback() async {
+    // Real vibration (not just a light tap) so it's felt reliably.
+    HapticFeedback.vibrate();
+    try {
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource('sounds/scan_beep.m4a'));
+    } catch (_) {
+      // If the custom tone fails to play for any reason (codec issue on an
+      // old device, etc.) fall back to the system click so feedback never
+      // silently disappears.
+      SystemSound.play(SystemSoundType.click);
+    }
+  }
+
+  void _flashOk() {
+    setState(() {
+      _flashFrame = true;
+      _errorMessage = null;
+    });
+    Future.delayed(const Duration(milliseconds: 250), () {
+      if (mounted) setState(() => _flashFrame = false);
+    });
+  }
+
+  void _showError(String message) {
+    setState(() => _errorMessage = message);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted && _errorMessage == message) {
+        setState(() => _errorMessage = null);
+      }
+    });
+  }
+
   void _handleDetect(BarcodeCapture capture) {
-    if (_cooldown) return;
+    final seenThisFrame = <String>{};
 
     for (final barcode in capture.barcodes) {
       final value = barcode.rawValue;
       if (value == null || value.isEmpty) continue;
+      seenThisFrame.add(value);
 
-      // Extra guard: ignore an identical code scanned again within the
-      // cooldown window (handles rapid multi-frame duplicate reads).
-      final now = DateTime.now();
-      if (_lastCode == value &&
-          _lastScanTime != null &&
-          now.difference(_lastScanTime!) < _cooldownDuration) {
+      final wasInFrame = _codesInFrame.contains(value);
+      if (wasInFrame) continue; // still being seen, not a new detection
+
+      // New detection this cycle (code just entered frame).
+      if (_consumedUntilGone.contains(value)) {
+        // Already scanned and hasn't left frame since — ignore.
         continue;
       }
 
-      _lastCode = value;
-      _lastScanTime = now;
+      try {
+        if (value.trim().isEmpty) {
+          _showError('باركود غير صالح');
+          continue;
+        }
 
-      // Beep + visual feedback.
-      SystemSound.play(SystemSoundType.click);
-      HapticFeedback.lightImpact();
-      setState(() => _flashFrame = true);
-      Future.delayed(const Duration(milliseconds: 250), () {
-        if (mounted) setState(() => _flashFrame = false);
-      });
+        _flashOk();
+        _playScanFeedback();
+        _consumedUntilGone.add(value);
 
-      if (!_isContinuous) {
-        Navigator.of(context).pop(value);
-        return;
+        if (!_isContinuous) {
+          Navigator.of(context).pop(value);
+          return;
+        }
+        widget.onScan!(value);
+      } catch (e) {
+        _showError('تعذر قراءة الباركود، حاول مرة أخرى');
       }
-
-      // Continuous mode: notify caller and start cooldown before accepting
-      // the next scan, so the same item isn't added twice by mistake.
-      widget.onScan!(value);
-      setState(() => _cooldown = true);
-      Future.delayed(_cooldownDuration, () {
-        if (mounted) setState(() => _cooldown = false);
-      });
-      return;
     }
+
+    // Any code no longer detected this cycle is free to fire again next
+    // time it appears (i.e. the user pulled it away and brought it back).
+    _consumedUntilGone.removeWhere((code) => !seenThisFrame.contains(code));
+    _codesInFrame = seenThisFrame;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        // Always keep an explicit, visible back arrow — including while an
+        // error state is showing — so the user is never stuck on this screen.
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'رجوع',
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Text(_isContinuous ? 'مسح مستمر للمنتجات' : 'مسح الباركود'),
         actions: [
           IconButton(
@@ -91,7 +152,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
           MobileScanner(
             onDetect: _handleDetect,
           ),
-          // Scan overlay with orange flash feedback
+          // Scan overlay: orange flash on success, red on error.
           Center(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
@@ -99,13 +160,48 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
               height: 250,
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: _flashFrame ? Colors.orange : const Color(0xFF1E88E5),
-                  width: _flashFrame ? 6 : 4,
+                  color: _errorMessage != null
+                      ? Colors.red
+                      : (_flashFrame ? Colors.orange : const Color(0xFF1E88E5)),
+                  width: (_flashFrame || _errorMessage != null) ? 6 : 4,
                 ),
                 borderRadius: BorderRadius.circular(20),
               ),
             ),
           ),
+          if (_errorMessage != null)
+            Positioned(
+              top: 16,
+              left: 16,
+              right: 16,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade700,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        tooltip: 'رجوع',
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             bottom: 40,
             left: 0,

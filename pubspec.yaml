@@ -1,7 +1,7 @@
 name: zad_mobile_pos
 description: ZAD Mobile POS - Professional Sales & Inventory Management
 publish_to: 'none'
-version: 1.0.0+2
+version: 1.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -12,7 +12,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
-  sqflite: 2.3.3+1
+  sqflite: ^2.3.0
   path: ^1.8.3
   path_provider: ^2.1.1
   provider: ^6.1.1
@@ -37,8 +37,10 @@ dependencies:
   uuid: ^4.2.1
   device_info_plus: ^9.1.2
   package_info_plus: ^8.3.0
+  audioplayers: ^6.1.0
 
 flutter:
   uses-material-design: true
   generate: true
-
+  assets:
+    - assets/sounds/
