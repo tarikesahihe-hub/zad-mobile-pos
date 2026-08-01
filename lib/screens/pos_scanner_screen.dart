@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:vibration/vibration.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class CartItem {
   final String barcode;
@@ -19,28 +20,14 @@ class CartItem {
   double get total => price * quantity;
 }
 
-class ScanLog {
-  final String barcode;
-  final String productName;
-  final DateTime timestamp;
-
-  ScanLog({
-    required this.barcode,
-    required this.productName,
-    required this.timestamp,
-  });
-}
-
 class PosCartController extends ChangeNotifier {
   List<CartItem> items = [];
-  List<ScanLog> undoHistory = [];
+  List<String> undoHistory = [];
 
   String invoiceNumber = '';
   String? _lastScannedBarcode;
-  DateTime? _lastScanTime;
-
-  // الضبط: ثانية واحدة فقط بين كل مسحة وأخرى (1000 مللي ثانية)
-  static const int debounceThresholdMs = 1000;
+  
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   PosCartController() {
     createNewInvoice();
@@ -53,23 +40,17 @@ class PosCartController extends ChangeNotifier {
     items.clear();
     undoHistory.clear();
     _lastScannedBarcode = null;
-    _lastScanTime = null;
     invoiceNumber = 'INV-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
     notifyListeners();
   }
 
   Future<bool> processBarcode(String barcode, Map<String, dynamic>? productFromDb) async {
-    final now = DateTime.now();
-
-    // تأخير ثانية واحدة قبل قبول نفس الباركود مرة أخرى
-    if (_lastScannedBarcode == barcode && _lastScanTime != null) {
-      if (now.difference(_lastScanTime!).inMilliseconds < debounceThresholdMs) {
-        return false; 
-      }
+    // شرط إبعاد المنتوج: إذا لم يبتعد الباركود، يتم تجاهله
+    if (_lastScannedBarcode == barcode) {
+      return false; 
     }
 
     _lastScannedBarcode = barcode;
-    _lastScanTime = now;
 
     if (productFromDb == null) {
       _triggerErrorFeedback();
@@ -89,25 +70,22 @@ class PosCartController extends ChangeNotifier {
       ));
     }
 
-    undoHistory.add(ScanLog(
-      barcode: barcode,
-      productName: productFromDb['name'],
-      timestamp: now,
-    ));
-    if (undoHistory.length > 10) {
-      undoHistory.removeAt(0);
-    }
-
+    undoHistory.add(barcode);
     notifyListeners();
     return true;
   }
 
-  // التراجع عن آخر مسح
+  // إعادة ضبط الباركود الأخير عند إبعاد المنتوج من إطار الكاميرا
+  void resetLastBarcode() {
+    _lastScannedBarcode = null;
+  }
+
+  // ↩️ التراجع عن آخر مسح
   void undoLastScan() {
     if (undoHistory.isEmpty) return;
 
-    final lastOp = undoHistory.removeLast();
-    final index = items.indexWhere((item) => item.barcode == lastOp.barcode);
+    final lastBarcode = undoHistory.removeLast();
+    final index = items.indexWhere((item) => item.barcode == lastBarcode);
 
     if (index != -1) {
       if (items[index].quantity > 1) {
@@ -115,7 +93,7 @@ class PosCartController extends ChangeNotifier {
       } else {
         items.removeAt(index);
       }
-      HapticFeedback.vibrate();
+      _triggerVibration(100);
       notifyListeners();
     }
   }
@@ -136,15 +114,21 @@ class PosCartController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // تفعيل الصوت والاهتزاز عبر خدمات النظام المباشرة
+  void _triggerVibration(int durationMs) async {
+    bool? hasVibrator = await Vibration.hasVibrator();
+    if (hasVibrator == true) {
+      Vibration.vibrate(duration: durationMs);
+    }
+  }
+
   void _triggerSuccessFeedback() {
-    SystemSound.play(SystemSoundType.click);
-    HapticFeedback.heavyImpact();
+    _triggerVibration(80);
+    _audioPlayer.play(UrlSource('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'));
   }
 
   void _triggerErrorFeedback() {
-    SystemSound.play(SystemSoundType.alert);
-    HapticFeedback.vibrate();
+    _triggerVibration(300);
+    _audioPlayer.play(UrlSource('https://assets.mixkit.co/active_storage/sfx/852/852-preview.mp3'));
   }
 }
 
@@ -170,13 +154,6 @@ class _PosScannerScreenState extends State<PosScannerScreen> {
           appBar: AppBar(
             title: Text('الفاتورة: ${cartController.invoiceNumber}'),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.undo, color: Colors.orangeAccent, size: 28),
-                tooltip: 'تراجع عن آخر مسحة',
-                onPressed: cartController.undoHistory.isNotEmpty
-                    ? () => cartController.undoLastScan()
-                    : null,
-              ),
               TextButton.icon(
                 onPressed: () => cartController.createNewInvoice(),
                 icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
@@ -197,6 +174,11 @@ class _PosScannerScreenState extends State<PosScannerScreen> {
                     MobileScanner(
                       controller: cameraController,
                       onDetect: (capture) async {
+                        if (capture.barcodes.isEmpty) {
+                          cartController.resetLastBarcode();
+                          return;
+                        }
+
                         for (final barcode in capture.barcodes) {
                           if (barcode.rawValue != null) {
                             _onBarcodeScanned(barcode.rawValue!);
@@ -214,7 +196,7 @@ class _PosScannerScreenState extends State<PosScannerScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Text(
-                          '● المسح المستمر (انتظار 1 ثانية)',
+                          '● ابعد المنتج لإعادة المسح',
                           style: TextStyle(color: Colors.greenAccent, fontSize: 12),
                         ),
                       ),
@@ -222,30 +204,36 @@ class _PosScannerScreenState extends State<PosScannerScreen> {
                   ],
                 ),
               ),
+
               Container(
-                color: Colors.blueGrey.shade50,
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                color: Colors.amber.shade100,
+                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade800),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepOrange,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
                       onPressed: cartController.undoHistory.isNotEmpty
                           ? () => cartController.undoLastScan()
                           : null,
-                      icon: const Icon(Icons.reply, color: Colors.white),
+                      icon: const Icon(Icons.undo, color: Colors.white, size: 24),
                       label: Text(
                         'تراجع ↩️ (${cartController.undoHistory.length})',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ),
                     Text(
-                      'العناصر: ${cartController.totalCount} | المجموع: ${cartController.totalAmount.toStringAsFixed(2)} دج',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      'العناصر: ${cartController.totalCount}\nالمجموع: ${cartController.totalAmount.toStringAsFixed(2)} دج',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      textAlign: TextAlign.right,
                     ),
                   ],
                 ),
               ),
+
               Expanded(
                 child: ListView.builder(
                   itemCount: cartController.items.length,
@@ -261,7 +249,7 @@ class _PosScannerScreenState extends State<PosScannerScreen> {
                             icon: const Icon(Icons.remove_circle_outline, color: Colors.orange),
                             onPressed: () => cartController.updateQuantity(item.barcode, -1),
                           ),
-                          Text('${item.quantity}', style: const TextStyle(fontSize: 16)),
+                          Text('${item.quantity}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                           IconButton(
                             icon: const Icon(Icons.add_circle_outline, color: Colors.green),
                             onPressed: () => cartController.updateQuantity(item.barcode, 1),
@@ -276,6 +264,7 @@ class _PosScannerScreenState extends State<PosScannerScreen> {
                   },
                 ),
               ),
+
               Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: SizedBox(
