@@ -7,8 +7,8 @@ allprojects {
 
 subprojects {
     plugins.withId('com.android.library') {
-        afterEvaluate {
-            android.compileSdkVersion 36
+        extensions.findByType(com.android.build.api.variant.AndroidComponentsExtension)?.finalizeDsl { ext ->
+            ext.compileSdk = 36
         }
     }
 }
