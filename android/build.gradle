@@ -48,3 +48,13 @@ subprojects {
 }
 
 ext.kotlin_version = '1.9.0'
+
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                compileSdkVersion 36
+            }
+        }
+    }
+}
