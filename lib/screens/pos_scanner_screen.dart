@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 class CartItem {
   final String barcode;
@@ -40,8 +39,8 @@ class PosCartController extends ChangeNotifier {
   String? _lastScannedBarcode;
   DateTime? _lastScanTime;
 
-  static const int debounceThresholdMs = 400;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  // الضبط: ثانية واحدة فقط بين كل مسحة وأخرى (1000 مللي ثانية)
+  static const int debounceThresholdMs = 1000;
 
   PosCartController() {
     createNewInvoice();
@@ -62,6 +61,7 @@ class PosCartController extends ChangeNotifier {
   Future<bool> processBarcode(String barcode, Map<String, dynamic>? productFromDb) async {
     final now = DateTime.now();
 
+    // تأخير ثانية واحدة قبل قبول نفس الباركود مرة أخرى
     if (_lastScannedBarcode == barcode && _lastScanTime != null) {
       if (now.difference(_lastScanTime!).inMilliseconds < debounceThresholdMs) {
         return false; 
@@ -72,11 +72,11 @@ class PosCartController extends ChangeNotifier {
     _lastScanTime = now;
 
     if (productFromDb == null) {
-      _playErrorFeedback();
+      _triggerErrorFeedback();
       return false;
     }
 
-    _playSuccessFeedback();
+    _triggerSuccessFeedback();
 
     final index = items.indexWhere((item) => item.barcode == barcode);
     if (index != -1) {
@@ -102,6 +102,7 @@ class PosCartController extends ChangeNotifier {
     return true;
   }
 
+  // التراجع عن آخر مسح
   void undoLastScan() {
     if (undoHistory.isEmpty) return;
 
@@ -114,7 +115,7 @@ class PosCartController extends ChangeNotifier {
       } else {
         items.removeAt(index);
       }
-      HapticFeedback.mediumImpact();
+      HapticFeedback.vibrate();
       notifyListeners();
     }
   }
@@ -135,12 +136,15 @@ class PosCartController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _playSuccessFeedback() {
-    HapticFeedback.lightImpact();
+  // تفعيل الصوت والاهتزاز عبر خدمات النظام المباشرة
+  void _triggerSuccessFeedback() {
+    SystemSound.play(SystemSoundType.click);
+    HapticFeedback.heavyImpact();
   }
 
-  void _playErrorFeedback() {
-    HapticFeedback.heavyImpact();
+  void _triggerErrorFeedback() {
+    SystemSound.play(SystemSoundType.alert);
+    HapticFeedback.vibrate();
   }
 }
 
@@ -166,6 +170,13 @@ class _PosScannerScreenState extends State<PosScannerScreen> {
           appBar: AppBar(
             title: Text('الفاتورة: ${cartController.invoiceNumber}'),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.undo, color: Colors.orangeAccent, size: 28),
+                tooltip: 'تراجع عن آخر مسحة',
+                onPressed: cartController.undoHistory.isNotEmpty
+                    ? () => cartController.undoLastScan()
+                    : null,
+              ),
               TextButton.icon(
                 onPressed: () => cartController.createNewInvoice(),
                 icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
@@ -203,7 +214,7 @@ class _PosScannerScreenState extends State<PosScannerScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Text(
-                          '● الكاميرا نشطة',
+                          '● المسح المستمر (انتظار 1 ثانية)',
                           style: TextStyle(color: Colors.greenAccent, fontSize: 12),
                         ),
                       ),
@@ -218,14 +229,14 @@ class _PosScannerScreenState extends State<PosScannerScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade700),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade800),
                       onPressed: cartController.undoHistory.isNotEmpty
                           ? () => cartController.undoLastScan()
                           : null,
-                      icon: const Icon(Icons.undo, color: Colors.white),
+                      icon: const Icon(Icons.reply, color: Colors.white),
                       label: Text(
-                        'تراجع (${cartController.undoHistory.length})',
-                        style: const TextStyle(color: Colors.white),
+                        'تراجع ↩️ (${cartController.undoHistory.length})',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                     ),
                     Text(
