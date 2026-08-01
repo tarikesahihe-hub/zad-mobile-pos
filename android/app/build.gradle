@@ -24,7 +24,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.zad.pos"
-    compileSdk = 36
+    compileSdk 36
     ndkVersion flutter.ndkVersion
 
     compileOptions {
