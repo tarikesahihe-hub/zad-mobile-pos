@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 import '../../providers/pos_provider.dart';
 import '../../providers/inventory_provider.dart';
@@ -18,6 +19,48 @@ class PosScreen extends StatefulWidget {
 }
 
 class _PosScreenState extends State<PosScreen> {
+  final AudioPlayer _completionPlayer = AudioPlayer();
+
+  @override
+  void dispose() {
+    _completionPlayer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _playSaleCompleteSound() async {
+    try {
+      await _completionPlayer.stop();
+      await _completionPlayer.play(AssetSource('sounds/sale_complete.mp3'));
+    } catch (_) {
+      // Silent failure — the sale itself already succeeded, don't block on audio.
+    }
+  }
+
+  Future<void> _confirmClearCart(PosProvider pos) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('إفراغ السلة'),
+        content: Text(
+          'السلة تحتوي على ${pos.cartItems.length} منتج بقيمة إجمالية '
+          '${pos.total.toStringAsFixed(2)} د.ج.\nهل تريد إفراغها؟',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('تراجع'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('إفراغ السلة', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      pos.clearCart();
+    }
+  }
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -145,6 +188,83 @@ class _PosScreenState extends State<PosScreen> {
   // Checkout (cash / card / credit)
   // ---------------------------------------------------------------------
 
+  void _showEditCartSheet(PosProvider pos) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Consumer<PosProvider>(
+          builder: (context, cartPos, _) {
+            return Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('تعديل السلة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+                Expanded(
+                  child: cartPos.cartItems.isEmpty
+                      ? const Center(child: Text('السلة فارغة'))
+                      : ListView.builder(
+                          controller: scrollController,
+                          itemCount: cartPos.cartItems.length,
+                          itemBuilder: (context, index) {
+                            final item = cartPos.cartItems[index];
+                            return ListTile(
+                              title: Text(item.product.name),
+                              subtitle: Text('${item.unitPrice.toStringAsFixed(2)} د.ج × ${item.quantity}'),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.remove_circle_outline),
+                                    onPressed: () {
+                                      if (item.quantity > 1) {
+                                        cartPos.updateQuantity(item.product.id!, item.quantity - 1);
+                                      } else {
+                                        cartPos.removeFromCart(item.product.id!);
+                                      }
+                                    },
+                                  ),
+                                  Text('${item.quantity}'),
+                                  IconButton(
+                                    icon: const Icon(Icons.add_circle_outline),
+                                    onPressed: () => cartPos.updateQuantity(item.product.id!, item.quantity + 1),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                    onPressed: () => cartPos.removeFromCart(item.product.id!),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('تم'),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   void _showCheckoutDialog() {
     final pos = context.read<PosProvider>();
     String localPaymentMethod = pos.paymentMethod == 'CASH' || pos.paymentMethod.isEmpty
@@ -270,6 +390,7 @@ class _PosScreenState extends State<PosScreen> {
                   : () async {
                       final sale = await pos.checkout();
                       if (mounted && sale != null) {
+                        _playSaleCompleteSound();
                         Navigator.pop(context);
                         Navigator.push(
                           context,
@@ -443,15 +564,31 @@ class _PosScreenState extends State<PosScreen> {
                           const SizedBox(height: 10),
                           Row(
                             children: [
+                              Container(
+                                margin: const EdgeInsets.only(left: 8),
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Color(0xFFFFC107), // أصفر
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.black87),
+                                  tooltip: 'تعديل السلة',
+                                  onPressed: pos.cartItems.isEmpty ? null : () => _showEditCartSheet(pos),
+                                ),
+                              ),
                               Expanded(
                                 child: ElevatedButton(
                                   onPressed: pos.cartItems.isEmpty ? null : _showCheckoutDialog,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF43A047), // أخضر
+                                    foregroundColor: Colors.white,
+                                  ),
                                   child: const Text('دفع'),
                                 ),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete),
-                                onPressed: pos.cartItems.isEmpty ? null : () => pos.clearCart(),
+                                onPressed: pos.cartItems.isEmpty ? null : () => _confirmClearCart(pos),
                               ),
                             ],
                           ),

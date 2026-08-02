@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/backup_service.dart';
 import '../../providers/app_provider.dart';
+import '../../services/license_service.dart';
+import '../license/license_gate_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -154,12 +156,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _confirmDeactivateLicense() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('إلغاء تفعيل الترخيص'),
+        content: const Text(
+          'هذا للاختبار فقط. سيتم مسح الترخيص المحفوظ على هذا الجهاز '
+          'وستحتاج لإعادة التفعيل (أو استئناف فترة التجربة إن كانت لم تنتهِ بعد). '
+          'هل أنت متأكد؟',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('إلغاء'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('نعم، ألغِ التفعيل', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await LicenseService().clearAll();
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LicenseGateScreen()),
+      (route) => false,
+    );
+  }
+
+  Widget _buildLicenseSection() {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: ListTile(
+        leading: const Icon(Icons.verified_user, color: Color(0xFF1E88E5)),
+        title: const Text('الترخيص'),
+        subtitle: const Text('إلغاء التفعيل (للاختبار فقط)'),
+        trailing: TextButton(
+          onPressed: _confirmDeactivateLicense,
+          style: TextButton.styleFrom(foregroundColor: Colors.red),
+          child: const Text('إلغاء التفعيل'),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('الإعدادات والنسخ الاحتياطي')),
       body: ListView(
         children: [
+          _buildLicenseSection(),
           _buildLanguageSection(),
           _buildBackupHeader(),
           const Padding(
