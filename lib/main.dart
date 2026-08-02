@@ -1,60 +1,47 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:provider/provider.dart';
-import 'providers/app_provider.dart';
-import 'providers/auth_provider.dart';
-import 'providers/inventory_provider.dart';
-import 'providers/pos_provider.dart';
-import 'providers/customer_provider.dart';
-import 'providers/report_provider.dart';
-import 'providers/sync_provider.dart';
-import 'providers/ai_provider.dart';
-import 'screens/splash_screen.dart';
-import 'utils/app_theme.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'activation_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ZadMobileApp());
+  await Firebase.initializeApp();
+  
+  runApp(
+    const ActivationScreen(
+      child: MyApp(),
+    ),
+  );
 }
 
-class ZadMobileApp extends StatelessWidget {
-  const ZadMobileApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AppProvider()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => InventoryProvider()),
-        ChangeNotifierProvider(create: (_) => PosProvider()),
-        ChangeNotifierProvider(create: (_) => CustomerProvider()),
-        ChangeNotifierProvider(create: (_) => ReportProvider()),
-        ChangeNotifierProvider(create: (_) => SyncProvider()),
-        ChangeNotifierProvider(create: (_) => AiProvider()),
-      ],
-      child: Consumer<AppProvider>(
-        builder: (context, appProvider, child) {
-          return MaterialApp(
-            title: 'ZAD Mobile POS',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: appProvider.themeMode,
-            locale: appProvider.locale,
-            supportedLocales: const [
-              Locale('ar'),
-              Locale('fr'),
-              Locale('en'),
-            ],
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            home: const SplashScreen(),
-          );
-        },
+    return MaterialApp(
+      title: 'Zad POS',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const HomeScreen(),
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Zad POS'),
+      ),
+      body: const Center(
+        child: Text(
+          'Welcome to Zad POS System',
+          style: TextStyle(fontSize: 20),
+        ),
       ),
     );
   }
