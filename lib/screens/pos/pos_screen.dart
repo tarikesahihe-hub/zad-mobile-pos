@@ -408,7 +408,8 @@ class _PosScreenState extends State<PosScreen> {
               onPressed: (localPaymentMethod == 'credit' && selectedCustomer == null)
                   ? null
                   : () async {
-                      final sale = await pos.checkout();if (mounted && sale != null) {
+                      final sale = await pos.checkout();
+                    if (mounted && sale != null) {
   _playSaleCompleteSound();
   if (localPaymentMethod == 'credit' && selectedCustomer != null) {
     await context.read<CustomerProvider>().loadCustomers();
