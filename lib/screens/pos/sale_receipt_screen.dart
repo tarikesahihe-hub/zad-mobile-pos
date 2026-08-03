@@ -97,16 +97,42 @@ class SaleReceiptScreen extends StatelessWidget {
                       _buildTotalRow('الضريبة:', sale.tax),
                     const Divider(),
                     _buildTotalRow('الإجمالي:', sale.total, isBold: true),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildAmountBadge('المدفوع', sale.amountPaid, const Color(0xFF43A047)),
-                        if (sale.changeDue > 0)
-                          _buildAmountBadge('الباقي', sale.changeDue, const Color(0xFF1E88E5))
-                        else if (sale.paymentMethod == 'credit' && (sale.total - sale.amountPaid) > 0)
-                          _buildAmountBadge('الدين', sale.total - sale.amountPaid, Colors.orange),
-                      ],
+                    const SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('المبلغ المدفوع:', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                          Text(
+                            '${sale.amountPaid.toStringAsFixed(2)} د.ج',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF43A047)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            sale.paymentMethod == 'credit' ? 'المتبقي كدين:' : 'الباقي:',
+                            style: const TextStyle(fontSize: 13, color: Colors.black87),
+                          ),
+                          Text(
+                            sale.paymentMethod == 'credit'
+                                ? '${(sale.total - sale.amountPaid).toStringAsFixed(2)} د.ج'
+                                : '${sale.changeDue.toStringAsFixed(2)} د.ج',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: sale.paymentMethod == 'credit' ? Colors.orange : const Color(0xFF1E88E5),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 16),
 
