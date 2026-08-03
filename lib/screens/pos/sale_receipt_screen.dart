@@ -97,24 +97,17 @@ class SaleReceiptScreen extends StatelessWidget {
                       _buildTotalRow('الضريبة:', sale.tax),
                     const Divider(),
                     _buildTotalRow('الإجمالي:', sale.total, isBold: true),
-                    const SizedBox(height: 8),
-                    _buildTotalRow('المبلغ المدفوع:', sale.amountPaid),
-                    if (sale.changeDue > 0)
-                      _buildTotalRow('الباقي للزبون:', sale.changeDue, isDiscount: false),
-                    if (sale.paymentMethod == 'credit' && (sale.total - sale.amountPaid) > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('المتبقي كدين:', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
-                            Text(
-                              '${(sale.total - sale.amountPaid).toStringAsFixed(2)} د.ج',
-                              style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildAmountBadge('المدفوع', sale.amountPaid, const Color(0xFF43A047)),
+                        if (sale.changeDue > 0)
+                          _buildAmountBadge('الباقي', sale.changeDue, const Color(0xFF1E88E5))
+                        else if (sale.paymentMethod == 'credit' && (sale.total - sale.amountPaid) > 0)
+                          _buildAmountBadge('الدين', sale.total - sale.amountPaid, Colors.orange),
+                      ],
+                    ),
                     const SizedBox(height: 16),
 
                     // Payment
@@ -207,6 +200,34 @@ class SaleReceiptScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAmountBadge(String label, double value, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Container(
+        width: 84,
+        height: 84,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color.withOpacity(0.1),
+          border: Border.all(color: color, width: 1.5),
+        ),
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 2),
+            Text(
+              value.toStringAsFixed(2),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color),
+            ),
+            Text('د.ج', style: TextStyle(fontSize: 9, color: color)),
+          ],
+        ),
       ),
     );
   }
