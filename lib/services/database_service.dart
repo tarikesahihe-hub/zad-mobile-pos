@@ -511,6 +511,8 @@ class DatabaseService {
         status: sale.status,
         items: items,
         createdAt: sale.createdAt,
+        amountPaid: sale.amountPaid,
+        changeDue: sale.changeDue,
       );
     }
     return null;
