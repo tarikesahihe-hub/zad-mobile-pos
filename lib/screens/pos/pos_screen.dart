@@ -249,12 +249,32 @@ class _PosScreenState extends State<PosScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('تم'),
-                    ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('تم'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: cartPos.cartItems.isEmpty
+                              ? null
+                              : () {
+                                  Navigator.pop(context); // إغلاق نافذة التعديل
+                                  _showCheckoutDialog();
+                                },
+                          icon: const Icon(Icons.payments),
+                          label: const Text('دفع'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF43A047), // أخضر
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -431,177 +451,230 @@ class _PosScreenState extends State<PosScreen> {
           ),
         ],
       ),
-      body: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Column(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 600;
+          final productPanel = _buildProductPanel();
+          final cartPanel = _buildCartPanel();
+
+          if (isNarrow) {
+            // هاتف: المنتجات فوق (قابلة للتمرير)، السلة تحت بعرض كامل
+            return Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: const InputDecoration(
-                      hintText: 'بحث عن منتج...',
-                      prefixIcon: Icon(Icons.search),
-                    ),
-                    onChanged: (value) {
-                      if (value.isEmpty) {
-                        context.read<InventoryProvider>().loadProducts();
-                      } else {
-                        context.read<InventoryProvider>().searchProducts(value);
-                      }
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: Consumer<InventoryProvider>(
-                    builder: (context, inventory, child) {
-                      if (inventory.isLoading) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (inventory.products.isEmpty) {
-                        return const Center(child: Text('لا توجد منتجات'));
-                      }
-                      return GridView.builder(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 1,
-                        ),
-                        itemCount: inventory.products.length,
-                        itemBuilder: (context, index) {
-                          final product = inventory.products[index];
-                          return Card(
-                            child: InkWell(
-                              onTap: () => _addToCart(product),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  Text('${product.price} د.ج'),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
+                Expanded(flex: 3, child: productPanel),
+                const Divider(height: 1),
+                SizedBox(
+                  height: 340,
+                  width: double.infinity,
+                  child: cartPanel,
                 ),
               ],
+            );
+          }
+
+          // تابلت/شاشة عريضة: جنب لجنب كما كان
+          return Row(
+            children: [
+              Expanded(flex: 2, child: productPanel),
+              Expanded(flex: 1, child: cartPanel),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildProductPanel() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            controller: _searchController,
+            decoration: const InputDecoration(
+              hintText: 'بحث عن منتج...',
+              prefixIcon: Icon(Icons.search),
             ),
+            onChanged: (value) {
+              if (value.isEmpty) {
+                context.read<InventoryProvider>().loadProducts();
+              } else {
+                context.read<InventoryProvider>().searchProducts(value);
+              }
+            },
           ),
-          Expanded(
-            flex: 1,
-            child: Consumer<PosProvider>(
-              builder: (context, pos, child) {
-                return Column(
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: pos.cartItems.length,
-                        itemBuilder: (context, index) {
-                          final item = pos.cartItems[index];
-                          return ListTile(
-                            title: Text(item.product.name),
-                            subtitle: Text('${item.product.price} x ${item.quantity}'),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.remove),
-                                  onPressed: () => pos.updateQuantity(
-                                    item.product.id!,
-                                    item.quantity - 1,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.add),
-                                  onPressed: () => pos.updateQuantity(
-                                    item.product.id!,
-                                    item.quantity + 1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      color: Colors.grey[200],
+        ),
+        Expanded(
+          child: Consumer<InventoryProvider>(
+            builder: (context, inventory, child) {
+              if (inventory.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (inventory.products.isEmpty) {
+                return const Center(child: Text('لا توجد منتجات'));
+              }
+              return GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  childAspectRatio: 1,
+                ),
+                itemCount: inventory.products.length,
+                itemBuilder: (context, index) {
+                  final product = inventory.products[index];
+                  return Card(
+                    child: InkWell(
+                      onTap: () => _addToCart(product),
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('المجموع الفرعي:'),
-                              Text('${pos.subtotal.toStringAsFixed(2)} د.ج'),
-                            ],
-                          ),
-                          if (pos.discount > 0)
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('الخصم:'),
-                                Text(
-                                  '-${pos.discount.toStringAsFixed(2)} د.ج',
-                                  style: const TextStyle(color: Colors.red),
-                                ),
-                              ],
-                            ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('الإجمالي:', style: TextStyle(fontWeight: FontWeight.bold)),
-                              Text(
-                                '${pos.total.toStringAsFixed(2)} د.ج',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Container(
-                                margin: const EdgeInsets.only(left: 8),
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Color(0xFFFFC107), // أصفر
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.black87),
-                                  tooltip: 'تعديل السلة',
-                                  onPressed: pos.cartItems.isEmpty ? null : () => _showEditCartSheet(pos),
-                                ),
-                              ),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: pos.cartItems.isEmpty ? null : _showCheckoutDialog,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF43A047), // أخضر
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  child: const Text('دفع'),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: pos.cartItems.isEmpty ? null : () => _confirmClearCart(pos),
-                              ),
-                            ],
-                          ),
+                          Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Text('${product.price} د.ج'),
                         ],
                       ),
                     ),
-                  ],
-                );
-              },
-            ),
+                  );
+                },
+              );
+            },
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCartPanel() {
+    return Consumer<PosProvider>(
+      builder: (context, pos, child) {
+        return Column(
+          children: [
+            Expanded(
+              child: pos.cartItems.isEmpty
+                  ? const Center(child: Text('السلة فارغة', style: TextStyle(color: Colors.grey)))
+                  : ListView.builder(
+                      itemCount: pos.cartItems.length,
+                      itemBuilder: (context, index) {
+                        final item = pos.cartItems[index];
+                        return ListTile(
+                          dense: true,
+                          title: Text(item.product.name, overflow: TextOverflow.ellipsis),
+                          subtitle: Text('${item.product.price} × ${item.quantity}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove, size: 20),
+                                onPressed: () => pos.updateQuantity(
+                                  item.product.id!,
+                                  item.quantity - 1,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add, size: 20),
+                                onPressed: () => pos.updateQuantity(
+                                  item.product.id!,
+                                  item.quantity + 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(12),
+              color: Colors.grey[200],
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('المجموع الفرعي:'),
+                      Text('${pos.subtotal.toStringAsFixed(2)} د.ج'),
+                    ],
+                  ),
+                  if (pos.discount > 0)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('الخصم:'),
+                        Text(
+                          '-${pos.discount.toStringAsFixed(2)} د.ج',
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('الإجمالي:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        '${pos.total.toStringAsFixed(2)} د.ج',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Container(
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFFFFC107), // أصفر
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.black87),
+                          iconSize: 22,
+                          tooltip: 'تعديل السلة',
+                          onPressed: pos.cartItems.isEmpty ? null : () => _showEditCartSheet(pos),
+                        ),
+                      ),
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: pos.cartItems.isEmpty
+                              ? Colors.grey.shade400
+                              : const Color(0xFF43A047), // أخضر
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: pos.cartItems.isEmpty ? null : _showCheckoutDialog,
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.payments, color: Colors.white, size: 20),
+                                Text('دفع', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.grey.shade300,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.black87),
+                          iconSize: 22,
+                          onPressed: pos.cartItems.isEmpty ? null : () => _confirmClearCart(pos),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
