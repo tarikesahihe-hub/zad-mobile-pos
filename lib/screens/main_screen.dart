@@ -54,10 +54,10 @@ class _MainScreenState extends State<MainScreen> {
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
         destinations: List.generate(
-          _titles.length,
+          _titles(context).length,
           (index) => NavigationDestination(
             icon: Icon(_icons[index]),
-            label: _titles[index],
+            label: _titles(context)[index],
           ),
         ),
       ),
