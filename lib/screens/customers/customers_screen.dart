@@ -93,7 +93,51 @@ class _CustomersScreenState extends State<CustomersScreen> {
     );
   }
 }
-
+void _showPayDebtDialog(BuildContext context, Customer customer) {
+  final amountController = TextEditingController();
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('تسديد دين'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('الدين الحالي: ${customer.balance.toStringAsFixed(2)} د.ج'),
+          const SizedBox(height: 12),
+          TextField(
+            controller: amountController,
+            autofocus: true,
+            textAlign: TextAlign.right,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'المبلغ المدفوع',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('إلغاء'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            final paid = double.tryParse(amountController.text.trim()) ?? 0;
+            if (paid <= 0) return;
+            final newBalance = customer.balance - paid;
+            final updated = customer.copyWith(
+              balance: newBalance < 0 ? 0 : newBalance,
+            );
+            await context.read<CustomerProvider>().updateCustomer(updated);
+            if (ctx.mounted) Navigator.pop(ctx);
+          },
+          child: const Text('تأكيد الدفع'),
+        ),
+      ],
+    ),
+  );
+}
 class _CustomerCard extends StatelessWidget {
   final Customer customer;
 
