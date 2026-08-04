@@ -120,15 +120,23 @@ class _CustomerCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              '${customer.balance.toStringAsFixed(2)} د.ج',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: customer.balance > 0 ? Colors.red : const Color(0xFF43A047),
-              ),
-            ),
-            const Text('الرصيد', style: TextStyle(fontSize: 11, color: Colors.grey)),
-          ],
+                Text(
+                  '${customer.balance.toStringAsFixed(2)} د.ج',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: customer.balance > 0 ? Colors.red : const Color(0xFF43A047),
+                  ),
+                ),
+                const Text('الرصيد', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                if (customer.balance > 0)
+                  IconButton(
+                    icon: const Icon(Icons.payments, color: Colors.green, size: 20),
+                    tooltip: 'تسديد دين',
+                    onPressed: () => _showPayDebtDialog(context, customer),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+              ],
         ),
       ),
     );
