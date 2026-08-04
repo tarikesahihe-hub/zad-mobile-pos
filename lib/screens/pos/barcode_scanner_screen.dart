@@ -57,7 +57,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     HapticFeedback.vibrate();
     try {
       await _audioPlayer.stop();
-      await _audioPlayer.play(AssetSource('sounds/scan_beep.m4a'));
+      await _audioPlayer.play(AssetSource('sounds/scan_beep.mp3'));
     } catch (_) {
       // If the custom tone fails to play for any reason (codec issue on an
       // old device, etc.) fall back to the system click so feedback never
