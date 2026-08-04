@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 
 enum LicenseState {
-  trial,              // within the 15-day free trial, fully offline
+  // within the 7-day free trial, fully offline
   trialExpired,       // trial over, nothing activated yet
   lifetimeActive,      // permanently activated offline (HMAC key)
   subscriptionActive,  // annual subscription, verified within grace period
@@ -23,7 +23,7 @@ class LicenseService {
 
   final _storage = const FlutterSecureStorage();
 
-  static const int trialDays = 15;
+  static const int trialDays = 7;
   // Subscription must reach the server at least once every N days, or it
   // locks pending re-connection (this is what makes the annual plan
   // "بالنت" as opposed to the lifetime key which never needs it again).
