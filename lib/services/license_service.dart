@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 
 enum LicenseState {
-  // within the 7-day free trial, fully offline
+  trial,               // within the 7-day free trial, fully offline
   trialExpired,       // trial over, nothing activated yet
   lifetimeActive,      // permanently activated offline (HMAC key)
   subscriptionActive,  // annual subscription, verified within grace period
