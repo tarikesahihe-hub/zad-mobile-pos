@@ -5,7 +5,7 @@ import 'inventory/inventory_screen.dart';
 import 'customers/customers_screen.dart';
 import 'reports/reports_screen.dart';
 import 'settings/settings_screen.dart';
-
+import '../l10n/app_strings.dart';
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -25,13 +25,13 @@ class _MainScreenState extends State<MainScreen> {
     const SettingsScreen(),
   ];
 
-  final List<String> _titles = [
-    'الرئيسية',
-    'نقطة البيع',
-    'المخزون',
-    'العملاء',
-    'التقارير',
-    'الإعدادات',
+  List<String> _titles(BuildContext context) => [
+    AppStrings.get(context, 'nav_home'),
+    AppStrings.get(context, 'nav_pos'),
+    AppStrings.get(context, 'nav_inventory'),
+    AppStrings.get(context, 'nav_customers'),
+    AppStrings.get(context, 'nav_reports'),
+    AppStrings.get(context, 'nav_settings'),
   ];
 
   final List<IconData> _icons = [
