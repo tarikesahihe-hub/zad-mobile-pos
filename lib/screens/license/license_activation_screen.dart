@@ -19,12 +19,19 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
   String? _deviceCode;
   bool _loading = false;
   String? _error;
+  int? _trialDaysLeft;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadDeviceCode();
+    _loadTrialInfo();
+  }
+
+  Future<void> _loadTrialInfo() async {
+    final remaining = await LicenseService().trialDaysRemaining();
+    if (mounted) setState(() => _trialDaysLeft = remaining);
   }
 
   Future<void> _loadDeviceCode() async {
@@ -100,16 +107,41 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildLifetimeTab(),
-          _buildSubscriptionTab(),
+          if (_trialDaysLeft != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              color: _trialDaysLeft! > 0
+                  ? Colors.orange.shade50
+                  : Colors.red.shade50,
+              child: Text(
+                _trialDaysLeft! > 0
+                    ? 'الأيام المتبقية في النسخة التجريبية: $_trialDaysLeft'
+                    : 'انتهت الفترة التجريبية',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _trialDaysLeft! > 0
+                      ? Colors.orange.shade900
+                      : Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildLifetimeTab(),
+                _buildSubscriptionTab(),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
-
   Widget _buildCard({required List<Widget> children}) {
     return SafeArea(
       child: Center(
