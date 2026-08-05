@@ -13,7 +13,6 @@ class AppTheme {
     );
   }
 
-  static ThemeData get darkTheme {
     static ThemeData get darkTheme {
     return ThemeData(
       brightness: Brightness.dark,
