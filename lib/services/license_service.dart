@@ -112,17 +112,21 @@ class LicenseService {
   /// Validates and activates a lifetime key entirely offline. No network
   /// call — this is intentional, it's the whole point of this license type.
   Future<String?> activateLifetime(String enteredKey) async {
-    final deviceCode = await getDeviceCode();
-    final expectedSuffix = _expectedLifetimeSuffix(deviceCode);
-    final expectedKey = formatLifetimeKey(expectedSuffix);
+    try {
+      final deviceCode = await getDeviceCode();
+      final expectedSuffix = _expectedLifetimeSuffix(deviceCode);
+      final expectedKey = formatLifetimeKey(expectedSuffix);
 
-    final normalizedEntered = enteredKey.trim().toUpperCase();
+      final normalizedEntered = enteredKey.trim().toUpperCase();
 
-    if (normalizedEntered == expectedKey) {
-      await _storage.write(key: _kLifetimeActive, value: 'true');
-      return null;
+      if (normalizedEntered == expectedKey) {
+        await _storage.write(key: _kLifetimeActive, value: 'true');
+        return null;
+      }
+      return 'مفتاح الترخيص غير صحيح لهذا الجهاز. تأكد من إرسال رمز الجهاز الصحيح.';
+    } catch (e) {
+      return 'خطأ أثناء التفعيل: $e';
     }
-    return 'مفتاح الترخيص غير صحيح لهذا الجهاز. تأكد أنك أرسلت رمز الجهاز الصحيح';
   }
 
   Future<bool> _isLifetimeActive() async {
