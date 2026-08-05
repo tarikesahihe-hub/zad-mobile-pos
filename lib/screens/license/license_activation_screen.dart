@@ -175,23 +175,7 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
         ),
       ),
       const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final fp = await LicenseService().getDeviceFingerprint();
-                      await Clipboard.setData(ClipboardData(text: fp));
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('تم نسخ بصمة الجهاز! أرسلها للدعم للحصول على مفتاحك.')),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.fingerprint),
-                    label: const Text('استخراج بصمة الجهاز ونسخها'),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                
                 TextField(
                   controller: _lifetimeKeyController,
         textAlign: TextAlign.center,
