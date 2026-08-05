@@ -5,6 +5,7 @@ import '../../services/backup_service.dart';
 import '../../providers/app_provider.dart';
 import '../../services/license_service.dart';
 import '../license/license_gate_screen.dart';
+import '../license/license_activation_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -196,12 +197,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: ListTile(
         leading: const Icon(Icons.verified_user, color: Color(0xFF1E88E5)),
         title: const Text('الترخيص'),
-        subtitle: const Text('إلغاء التفعيل (للاختبار فقط)'),
-        trailing: TextButton(
-          onPressed: _confirmDeactivateLicense,
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
-          child: const Text('إلغاء التفعيل'),
-        ),
+        subtitle: const Text('تفعيل مدى الحياة أو الاشتراك السنوي'),
+        trailing: const Icon(Icons.chevron_left),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const LicenseActivationScreen()),
+          );
+        },
       ),
     );
   }
