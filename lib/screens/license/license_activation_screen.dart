@@ -52,9 +52,21 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
     if (!mounted) return;
     setState(() => _loading = false);
     if (error == null) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('نجح التفعيل - تشخيص'),
+            content: const Text('لو وصلت لهذه الرسالة فالمشكلة في شاشة تسجيل الدخول وليس في التفعيل نفسه.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('إغلاق'),
+              ),
+            ],
+          ),
+        );
+      }
     } else {
       setState(() => _error = error);
     }
