@@ -18,11 +18,11 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = [
     const DashboardScreen(),
-    const PosScreen(),
-    const InventoryScreen(),
-    const CustomersScreen(),
-    const ReportsScreen(),
-    const SettingsScreen(),
+    const Center(child: Text('POS - معطل للتشخيص')),
+    const Center(child: Text('Inventory - معطل للتشخيص')),
+    const Center(child: Text('Customers - معطل للتشخيص')),
+    const Center(child: Text('Reports - معطل للتشخيص')),
+    const Center(child: Text('Settings - معطل للتشخيص')),
   ];
 
   List<String> _titles(BuildContext context) => [
