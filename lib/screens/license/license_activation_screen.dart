@@ -53,19 +53,13 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
     setState(() => _loading = false);
     if (error == null) {
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('نجح التفعيل - تشخيص'),
-            content: const Text('لو وصلت لهذه الرسالة فالمشكلة في شاشة تسجيل الدخول وليس في التفعيل نفسه.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('إغلاق'),
-              ),
-            ],
-          ),
-        );
+        try {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        } catch (e, st) {
+          setState(() => _error = 'خطأ في الانتقال: \$e\n\$st');
+        }
       }
     } else {
       setState(() => _error = error);
