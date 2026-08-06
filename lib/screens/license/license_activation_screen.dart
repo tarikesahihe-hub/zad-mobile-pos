@@ -55,7 +55,12 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
       if (mounted) {
         try {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            MaterialPageRoute(
+              builder: (_) => Scaffold(
+                appBar: AppBar(title: const Text('اختبار فارغ')),
+                body: const Center(child: Text('نجح الانتقال بلا كراش')),
+              ),
+            ),
           );
         } catch (e, st) {
           setState(() => _error = 'خطأ في الانتقال: \$e\n\$st');
