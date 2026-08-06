@@ -17,10 +17,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ReportProvider>().loadDashboardStats();
-      context.read<AiProvider>().generateInsights();
-    });
+    // TEMPORARILY DISABLED FOR DIAGNOSIS
   }
 
   @override
