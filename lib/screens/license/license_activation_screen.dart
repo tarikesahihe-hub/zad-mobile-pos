@@ -75,6 +75,7 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
     if (!mounted) return;
     setState(() => _loading = false);
     if (error == null) {
+      if (mounted) setState(() => _trialDaysLeft = null);
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
@@ -120,7 +121,7 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
                   : Colors.red.shade50,
               child: Text(
                 _trialDaysLeft! > 0
-                    ? 'الأيام المتبقية في النسخة التجريبية: $_trialDaysLeft'
+                    ? 'الأيام المتبقية في النسخة التجريبية: $_trialDaysLeft أيام'
                     : 'انتهت الفترة التجريبية',
                 textAlign: TextAlign.center,
                 style: TextStyle(
