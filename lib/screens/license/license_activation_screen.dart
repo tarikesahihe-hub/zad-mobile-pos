@@ -195,13 +195,14 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
             ),
             const SizedBox(height: 8),
             TextButton.icon(
-              onPressed: _deviceCode == null
-                  ? null
-                  : () {
-                      Clipboard.setData(ClipboardData(text: _deviceCode!));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('تم نسخ رمز الجهاز')),
-                      );
+              onPressed: _deviceCode == null ? null : () async {
+                      try {
+                        await Clipboard.setData(ClipboardData(text: _deviceCode!));
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نسخ رمز الجهاز')));
+                      } catch (e) {
+                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('فشل النسخ: ' + e.toString())));
+                      }
                     },
               icon: const Icon(Icons.copy, size: 18),
               label: const Text('نسخ الرمز'),
