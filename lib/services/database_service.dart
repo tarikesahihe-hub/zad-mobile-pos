@@ -27,7 +27,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -120,6 +120,19 @@ class DatabaseService {
       )
     ''');
 
+
+    // Expenses table
+    await db.execute('''
+      CREATE TABLE expenses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        amount REAL NOT NULL DEFAULT 0,
+        category TEXT,
+        notes TEXT,
+        date TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
     // Users table
     await db.execute('''
       CREATE TABLE users (
@@ -298,6 +311,19 @@ class DatabaseService {
     if (oldVersion < 3) {
       await db.execute('ALTER TABLE sales ADD COLUMN amount_paid REAL NOT NULL DEFAULT 0');
       await db.execute('ALTER TABLE sales ADD COLUMN change_due REAL NOT NULL DEFAULT 0');
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS expenses (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          amount REAL NOT NULL DEFAULT 0,
+          category TEXT,
+          notes TEXT,
+          date TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      ''');
     }
   }
 
@@ -582,6 +608,22 @@ class DatabaseService {
     final db = await database;
     final maps = await db.query('suppliers', orderBy: 'name ASC');
     return maps.map((m) => Supplier.fromMap(m)).toList();
+  }
+
+  // ========== EXPENSES ==========
+  Future<int> insertExpense(Map<String, dynamic> expense) async {
+    final db = await database;
+    return await db.insert('expenses', expense);
+  }
+
+  Future<int> deleteExpense(int id) async {
+    final db = await database;
+    return await db.delete('expenses', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllExpenses() async {
+    final db = await database;
+    return await db.query('expenses', orderBy: 'date DESC');
   }
 
   // ========== USERS ==========
