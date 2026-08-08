@@ -626,6 +626,60 @@ class DatabaseService {
     return await db.query('expenses', orderBy: 'date DESC');
   }
 
+  // ========== PURCHASE ORDERS ==========
+  Future<int> insertPurchaseOrder(
+    Map<String, dynamic> order,
+    List<Map<String, dynamic>> items,
+  ) async {
+    final db = await database;
+    return await db.transaction((txn) async {
+      final orderId = await txn.insert('purchase_orders', order);
+      for (final item in items) {
+        item['order_id'] = orderId;
+        await txn.insert('purchase_order_items', item);
+        final productId = item['product_id'];
+        final qty = item['quantity'] ?? 0;
+        if (productId != null) {
+          await txn.rawUpdate(
+            'UPDATE products SET quantity = quantity + ? WHERE id = ?',
+            [qty, productId],
+          );
+        }
+      }
+      final supplierId = order['supplier_id'];
+      final total = order['total'] ?? 0.0;
+      if (supplierId != null) {
+        await txn.rawUpdate(
+          'UPDATE suppliers SET balance = balance + ? WHERE id = ?',
+          [total, supplierId],
+        );
+      }
+      return orderId;
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getAllPurchaseOrders() async {
+    final db = await database;
+    return await db.query('purchase_orders', orderBy: 'date DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> getPurchaseOrderItems(int orderId) async {
+    final db = await database;
+    return await db.query(
+      'purchase_order_items',
+      where: 'order_id = ?',
+      whereArgs: [orderId],
+    );
+  }
+
+  Future<int> addSupplierDebt(int supplierId, double amount) async {
+    final db = await database;
+    return await db.rawUpdate(
+      'UPDATE suppliers SET balance = balance + ? WHERE id = ?',
+      [amount, supplierId],
+    );
+  }
+
   // ========== USERS ==========
   Future<int> insertUser(User user) async {
     final db = await database;
