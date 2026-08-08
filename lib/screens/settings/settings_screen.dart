@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../services/backup_service.dart';
 import '../../providers/app_provider.dart';
 import '../../services/license_service.dart';
+import '../../l10n/app_strings.dart';
 import '../license/license_gate_screen.dart';
 import '../license/license_activation_screen.dart';
 
@@ -37,14 +38,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await BackupService().createBackup();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إنشاء نسخة احتياطية بنجاح')),
+          SnackBar(content: Text(AppStrings.get(context, 'set_backup_success'))),
         );
       }
       await _loadBackups();
     } catch (e) {
       if (mounted) {
+        final msg = AppStrings.get(context, 'set_backup_fail').replaceAll('{error}', '$e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('فشل إنشاء النسخة الاحتياطية: $e')),
+          SnackBar(content: Text(msg)),
         );
       }
     } finally {
@@ -61,11 +63,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('استعادة نسخة احتياطية'),
-        content: const Text('سيتم استبدال البيانات الحالية بالبيانات من هذه النسخة. متابعة؟'),
+        title: Text(AppStrings.get(context, 'set_restore_title')),
+        content: Text(AppStrings.get(context, 'set_restore_body')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('استعادة')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(AppStrings.get(context, 'common_cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(AppStrings.get(context, 'set_restore_action')),
+          ),
         ],
       ),
     );
@@ -73,7 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await BackupService().restoreBackup(path);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تمت الاستعادة بنجاح')),
+        SnackBar(content: Text(AppStrings.get(context, 'set_restore_success'))),
       );
     }
   }
@@ -90,10 +98,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  children: const [
-                    Icon(Icons.language, color: Color(0xFF1E88E5)),
-                    SizedBox(width: 8),
-                    Text('اللغة / Langue / Language', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  children: [
+                    const Icon(Icons.language, color: Color(0xFF1E88E5)),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppStrings.get(context, 'set_language_label'),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -125,10 +136,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              children: const [
-                Icon(Icons.backup, color: Color(0xFF1E88E5)),
-                SizedBox(width: 8),
-                Text('النسخ الاحتياطي', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              children: [
+                const Icon(Icons.backup, color: Color(0xFF1E88E5)),
+                const SizedBox(width: 8),
+                Text(
+                  AppStrings.get(context, 'set_backup_title'),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -143,7 +157,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
                     : const Icon(Icons.add),
-                label: Text(_creatingBackup ? 'جارِ الإنشاء...' : 'إنشاء نسخة احتياطية الآن'),
+                label: Text(
+                  _creatingBackup
+                      ? AppStrings.get(context, 'set_creating_backup')
+                      : AppStrings.get(context, 'set_create_backup'),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF43A047),
                   foregroundColor: Colors.white,
@@ -161,20 +179,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('إلغاء تفعيل الترخيص'),
-        content: const Text(
-          'هذا للاختبار فقط. سيتم مسح الترخيص المحفوظ على هذا الجهاز '
-          'وستحتاج لإعادة التفعيل (أو استئناف فترة التجربة إن كانت لم تنتهِ بعد). '
-          'هل أنت متأكد؟',
-        ),
+        title: Text(AppStrings.get(context, 'set_deactivate_title')),
+        content: Text(AppStrings.get(context, 'set_deactivate_body')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('إلغاء'),
+            child: Text(AppStrings.get(context, 'common_cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('نعم، ألغِ التفعيل', style: TextStyle(color: Colors.red)),
+            child: Text(
+              AppStrings.get(context, 'set_deactivate_confirm'),
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -196,8 +213,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: ListTile(
         leading: const Icon(Icons.verified_user, color: Color(0xFF1E88E5)),
-        title: const Text('الترخيص'),
-        subtitle: const Text('تفعيل مدى الحياة أو الاشتراك السنوي'),
+        title: Text(AppStrings.get(context, 'set_license_title')),
+        subtitle: Text(AppStrings.get(context, 'set_license_subtitle')),
         trailing: const Icon(Icons.chevron_left),
         onTap: () {
           Navigator.of(context).push(
@@ -211,23 +228,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('الإعدادات والنسخ الاحتياطي')),
+      appBar: AppBar(title: Text(AppStrings.get(context, 'set_title'))),
       body: ListView(
         children: [
           _buildLicenseSection(),
           _buildLanguageSection(),
           _buildBackupHeader(),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Align(
               alignment: Alignment.centerRight,
-              child: Text('النسخ الاحتياطية المحفوظة', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(
+                AppStrings.get(context, 'set_saved_backups'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
           if (_backups.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: Text('لا توجد نسخ احتياطية بعد')),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(child: Text(AppStrings.get(context, 'set_no_backups'))),
             ),
           ListView.builder(
             shrinkWrap: true,
@@ -237,10 +257,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               final backup = _backups[index];
               final fileName = backup.path.split('/').last;
               final stat = backup.statSync();
+              final sizeText = AppStrings
+                  .get(context, 'set_size_label')
+                  .replaceAll('{size}', (stat.size / 1024).toStringAsFixed(2));
 
               return ListTile(
                 title: Text(fileName),
-                subtitle: Text('الحجم: ${(stat.size / 1024).toStringAsFixed(2)} KB'),
+                subtitle: Text(sizeText),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
