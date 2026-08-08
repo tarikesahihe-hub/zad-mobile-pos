@@ -7,6 +7,7 @@ import '../../providers/inventory_provider.dart';
 import '../../providers/customer_provider.dart';
 import '../../models/product.dart';
 import '../../models/customer.dart';
+import '../../l10n/app_strings.dart';
 import '../invoices/invoice_list_screen.dart';
 import 'barcode_scanner_screen.dart';
 import 'sale_receipt_screen.dart';
@@ -37,22 +38,28 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Future<void> _confirmClearCart(PosProvider pos) async {
+    final currency = AppStrings.get(context, 'common_currency');
+    final body = AppStrings
+        .get(context, 'pos_clear_cart_body')
+        .replaceAll('{count}', '${pos.cartItems.length}')
+        .replaceAll('{total}', pos.total.toStringAsFixed(2))
+        .replaceAll(' د.ج', ' $currency');
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('إفراغ السلة'),
-        content: Text(
-          'السلة تحتوي على ${pos.cartItems.length} منتج بقيمة إجمالية '
-          '${pos.total.toStringAsFixed(2)} د.ج.\nهل تريد إفراغها؟',
-        ),
+        title: Text(AppStrings.get(context, 'pos_clear_cart_title')),
+        content: Text(body),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('تراجع'),
+            child: Text(AppStrings.get(context, 'pos_undo')),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('إفراغ السلة', style: TextStyle(color: Colors.red)),
+            child: Text(
+              AppStrings.get(context, 'pos_clear_cart_title'),
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -120,32 +127,43 @@ class _PosScreenState extends State<PosScreen> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('منتج جديد'),
+        title: Text(AppStrings.get(context, 'pos_new_product_title')),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('الباركود: $barcode', style: const TextStyle(color: Colors.grey)),
+              Text(
+                '${AppStrings.get(context, 'pos_barcode_label')} $barcode',
+                style: const TextStyle(color: Colors.grey),
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: nameController,
                 autofocus: true,
-                decoration: const InputDecoration(labelText: 'اسم المنتج'),
+                decoration: InputDecoration(
+                  labelText: AppStrings.get(context, 'pos_product_name'),
+                ),
               ),
               TextField(
                 controller: purchasePriceController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'سعر الشراء'),
+                decoration: InputDecoration(
+                  labelText: AppStrings.get(context, 'pos_purchase_price'),
+                ),
               ),
               TextField(
                 controller: priceController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'سعر البيع'),
+                decoration: InputDecoration(
+                  labelText: AppStrings.get(context, 'pos_sale_price'),
+                ),
               ),
               TextField(
                 controller: quantityController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'الكمية'),
+                decoration: InputDecoration(
+                  labelText: AppStrings.get(context, 'pos_quantity'),
+                ),
               ),
             ],
           ),
@@ -153,7 +171,7 @@ class _PosScreenState extends State<PosScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, null),
-            child: const Text('إلغاء'),
+            child: Text(AppStrings.get(context, 'common_cancel')),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -177,7 +195,7 @@ class _PosScreenState extends State<PosScreen> {
                 Navigator.pop(dialogContext, null);
               }
             },
-            child: const Text('حفظ وإضافة للسلة'),
+            child: Text(AppStrings.get(context, 'pos_save_add_cart')),
           ),
         ],
       ),
@@ -204,13 +222,16 @@ class _PosScreenState extends State<PosScreen> {
           builder: (context, cartPos, _) {
             return Column(
               children: [
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('تعديل السلة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    AppStrings.get(context, 'pos_edit_cart'),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 Expanded(
                   child: cartPos.cartItems.isEmpty
-                      ? const Center(child: Text('السلة فارغة'))
+                      ? Center(child: Text(AppStrings.get(context, 'pos_cart_empty')))
                       : ListView.builder(
                           controller: scrollController,
                           itemCount: cartPos.cartItems.length,
@@ -218,7 +239,9 @@ class _PosScreenState extends State<PosScreen> {
                             final item = cartPos.cartItems[index];
                             return ListTile(
                               title: Text(item.product.name),
-                              subtitle: Text('${item.unitPrice.toStringAsFixed(2)} د.ج × ${item.quantity}'),
+                              subtitle: Text(
+                                '${item.unitPrice.toStringAsFixed(2)} ${AppStrings.get(context, 'common_currency')} × ${item.quantity}',
+                              ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -254,7 +277,7 @@ class _PosScreenState extends State<PosScreen> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('تم'),
+                          child: Text(AppStrings.get(context, 'common_done')),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -263,13 +286,13 @@ class _PosScreenState extends State<PosScreen> {
                           onPressed: cartPos.cartItems.isEmpty
                               ? null
                               : () {
-                                  Navigator.pop(context); // إغلاق نافذة التعديل
+                                  Navigator.pop(context);
                                   _showCheckoutDialog();
                                 },
                           icon: const Icon(Icons.payments),
-                          label: const Text('دفع'),
+                          label: Text(AppStrings.get(context, 'pos_pay')),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF43A047), // أخضر
+                            backgroundColor: const Color(0xFF43A047),
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -284,9 +307,9 @@ class _PosScreenState extends State<PosScreen> {
       ),
     );
   }
-
-  void _showCheckoutDialog() {
+void _showCheckoutDialog() {
     final pos = context.read<PosProvider>();
+    final currency = AppStrings.get(context, 'common_currency');
     String localPaymentMethod = pos.paymentMethod == 'CASH' || pos.paymentMethod.isEmpty
         ? 'cash'
         : pos.paymentMethod.toLowerCase();
@@ -296,18 +319,18 @@ class _PosScreenState extends State<PosScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('إتمام عملية البيع'),
+          title: Text(AppStrings.get(context, 'pos_checkout_title')),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('الإجمالي: ${pos.total.toStringAsFixed(2)} د.ج'),
+                Text('${AppStrings.get(context, 'pos_total_label')} ${pos.total.toStringAsFixed(2)} $currency'),
                 const SizedBox(height: 10),
                 SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'cash', label: Text('نقداً')),
-                    ButtonSegment(value: 'card', label: Text('بطاقة')),
-                    ButtonSegment(value: 'credit', label: Text('بالدين')),
+                  segments: [
+                    ButtonSegment(value: 'cash', label: Text(AppStrings.get(context, 'pos_cash'))),
+                    ButtonSegment(value: 'card', label: Text(AppStrings.get(context, 'pos_card'))),
+                    ButtonSegment(value: 'credit', label: Text(AppStrings.get(context, 'pos_credit'))),
                   ],
                   selected: {localPaymentMethod},
                   onSelectionChanged: (selected) {
@@ -325,13 +348,15 @@ class _PosScreenState extends State<PosScreen> {
                         });
                       }
                       return DropdownButtonFormField<Customer>(
-                        decoration: const InputDecoration(labelText: 'اختر الزبون'),
+                        decoration: InputDecoration(
+                          labelText: AppStrings.get(context, 'pos_select_customer'),
+                        ),
                         value: selectedCustomer,
                         items: customerProvider.customers
                             .map((c) => DropdownMenuItem(
                                   value: c,
                                   child: Text(
-                                    '${c.name}${c.balance > 0 ? " (دين: ${c.balance.toStringAsFixed(0)} د.ج)" : ""}',
+                                    '${c.name}${c.balance > 0 ? " (${AppStrings.get(context, 'pos_debt_suffix')}: ${c.balance.toStringAsFixed(0)} $currency)" : ""}',
                                   ),
                                 ))
                             .toList(),
@@ -345,16 +370,16 @@ class _PosScreenState extends State<PosScreen> {
                     },
                   ),
                   if (selectedCustomer == null)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 6),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
                       child: Text(
-                        'يجب اختيار زبون لتسجيل البيع بالدين',
-                        style: TextStyle(color: Colors.red, fontSize: 12),
+                        AppStrings.get(context, 'pos_credit_customer_required'),
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
                       ),
                     ),
                 ],
                 TextField(
-                  decoration: const InputDecoration(labelText: 'الخصم'),
+                  decoration: InputDecoration(labelText: AppStrings.get(context, 'pos_discount')),
                   keyboardType: TextInputType.number,
                   onChanged: (value) {
                     pos.setDiscount(double.tryParse(value) ?? 0);
@@ -364,7 +389,9 @@ class _PosScreenState extends State<PosScreen> {
                 const SizedBox(height: 8),
                 TextField(
                   decoration: InputDecoration(
-                    labelText: localPaymentMethod == 'credit' ? 'المبلغ المدفوع الآن (اختياري)' : 'المبلغ المدفوع',
+                    labelText: localPaymentMethod == 'credit'
+                        ? AppStrings.get(context, 'pos_amount_paid_optional')
+                        : AppStrings.get(context, 'pos_amount_paid'),
                     hintText: pos.total.toStringAsFixed(2),
                   ),
                   keyboardType: TextInputType.number,
@@ -378,9 +405,9 @@ class _PosScreenState extends State<PosScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('المتبقي كدين:'),
+                      Text(AppStrings.get(context, 'pos_remaining_debt')),
                       Text(
-                        '${pos.remainingDue.toStringAsFixed(2)} د.ج',
+                        '${pos.remainingDue.toStringAsFixed(2)} $currency',
                         style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -389,9 +416,9 @@ class _PosScreenState extends State<PosScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('الباقي للزبون:'),
+                      Text(AppStrings.get(context, 'pos_change_due')),
                       Text(
-                        '${pos.changeDue.toStringAsFixed(2)} د.ج',
+                        '${pos.changeDue.toStringAsFixed(2)} $currency',
                         style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -402,19 +429,19 @@ class _PosScreenState extends State<PosScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('إلغاء'),
+              child: Text(AppStrings.get(context, 'common_cancel')),
             ),
             ElevatedButton(
               onPressed: (localPaymentMethod == 'credit' && selectedCustomer == null)
                   ? null
                   : () async {
                       final sale = await pos.checkout();
-                    if (mounted && sale != null) {
-  _playSaleCompleteSound();
-  if (localPaymentMethod == 'credit' && selectedCustomer != null) {
-    await context.read<CustomerProvider>().loadCustomers();
-  }
-  Navigator.pop(context);
+                      if (mounted && sale != null) {
+                        _playSaleCompleteSound();
+                        if (localPaymentMethod == 'credit' && selectedCustomer != null) {
+                          await context.read<CustomerProvider>().loadCustomers();
+                        }
+                        Navigator.pop(context);
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -423,7 +450,7 @@ class _PosScreenState extends State<PosScreen> {
                         );
                       }
                     },
-              child: const Text('تأكيد'),
+              child: Text(AppStrings.get(context, 'common_confirm')),
             ),
           ],
         ),
@@ -435,11 +462,11 @@ class _PosScreenState extends State<PosScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('شاشة البيع (POS)'),
+        title: Text(AppStrings.get(context, 'pos_title')),
         actions: [
           IconButton(
             icon: const Icon(Icons.receipt_long),
-            tooltip: 'الفواتير',
+            tooltip: AppStrings.get(context, 'pos_invoices_tooltip'),
             onPressed: () {
               Navigator.push(
                 context,
@@ -449,7 +476,7 @@ class _PosScreenState extends State<PosScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
-            tooltip: 'مسح مستمر',
+            tooltip: AppStrings.get(context, 'pos_scan_tooltip'),
             onPressed: _openContinuousScanner,
           ),
         ],
@@ -461,7 +488,6 @@ class _PosScreenState extends State<PosScreen> {
           final cartPanel = _buildCartPanel();
 
           if (isNarrow) {
-            // هاتف: المنتجات فوق (قابلة للتمرير)، السلة تحت بعرض كامل
             return Column(
               children: [
                 Expanded(flex: 3, child: productPanel),
@@ -475,7 +501,6 @@ class _PosScreenState extends State<PosScreen> {
             );
           }
 
-          // تابلت/شاشة عريضة: جنب لجنب كما كان
           return Row(
             children: [
               Expanded(flex: 2, child: productPanel),
@@ -494,9 +519,9 @@ class _PosScreenState extends State<PosScreen> {
           padding: const EdgeInsets.all(8.0),
           child: TextField(
             controller: _searchController,
-            decoration: const InputDecoration(
-              hintText: 'بحث عن منتج...',
-              prefixIcon: Icon(Icons.search),
+            decoration: InputDecoration(
+              hintText: AppStrings.get(context, 'pos_search_hint'),
+              prefixIcon: const Icon(Icons.search),
             ),
             onChanged: (value) {
               if (value.isEmpty) {
@@ -514,7 +539,7 @@ class _PosScreenState extends State<PosScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (inventory.products.isEmpty) {
-                return const Center(child: Text('لا توجد منتجات'));
+                return Center(child: Text(AppStrings.get(context, 'pos_no_products')));
               }
               return GridView.builder(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -531,7 +556,7 @@ class _PosScreenState extends State<PosScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          Text('${product.price} د.ج'),
+                          Text('${product.price} ${AppStrings.get(context, 'common_currency')}'),
                         ],
                       ),
                     ),
@@ -548,11 +573,12 @@ class _PosScreenState extends State<PosScreen> {
   Widget _buildCartPanel() {
     return Consumer<PosProvider>(
       builder: (context, pos, child) {
+        final currency = AppStrings.get(context, 'common_currency');
         return Column(
           children: [
             Expanded(
               child: pos.cartItems.isEmpty
-                  ? const Center(child: Text('السلة فارغة', style: TextStyle(color: Colors.grey)))
+                  ? Center(child: Text(AppStrings.get(context, 'pos_cart_empty'), style: const TextStyle(color: Colors.grey)))
                   : ListView.builder(
                       itemCount: pos.cartItems.length,
                       itemBuilder: (context, index) {
@@ -592,17 +618,17 @@ class _PosScreenState extends State<PosScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('المجموع الفرعي:'),
-                      Text('${pos.subtotal.toStringAsFixed(2)} د.ج'),
+                      Text(AppStrings.get(context, 'pos_subtotal')),
+                      Text('${pos.subtotal.toStringAsFixed(2)} $currency'),
                     ],
                   ),
                   if (pos.discount > 0)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('الخصم:'),
+                        Text(AppStrings.get(context, 'pos_discount_label')),
                         Text(
-                          '-${pos.discount.toStringAsFixed(2)} د.ج',
+                          '-${pos.discount.toStringAsFixed(2)} $currency',
                           style: const TextStyle(color: Colors.red),
                         ),
                       ],
@@ -610,9 +636,9 @@ class _PosScreenState extends State<PosScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('الإجمالي:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(AppStrings.get(context, 'pos_total_label'), style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text(
-                        '${pos.total.toStringAsFixed(2)} د.ج',
+                        '${pos.total.toStringAsFixed(2)} $currency',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -624,12 +650,12 @@ class _PosScreenState extends State<PosScreen> {
                       Container(
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Color(0xFFFFC107), // أصفر
+                          color: Color(0xFFFFC107),
                         ),
                         child: IconButton(
                           icon: const Icon(Icons.edit, color: Colors.black87),
                           iconSize: 22,
-                          tooltip: 'تعديل السلة',
+                          tooltip: AppStrings.get(context, 'pos_edit_cart'),
                           onPressed: pos.cartItems.isEmpty ? null : () => _showEditCartSheet(pos),
                         ),
                       ),
@@ -640,7 +666,7 @@ class _PosScreenState extends State<PosScreen> {
                           shape: BoxShape.circle,
                           color: pos.cartItems.isEmpty
                               ? Colors.grey.shade400
-                              : const Color(0xFF43A047), // أخضر
+                              : const Color(0xFF43A047),
                         ),
                         child: Material(
                           color: Colors.transparent,
@@ -648,12 +674,15 @@ class _PosScreenState extends State<PosScreen> {
                           child: InkWell(
                             customBorder: const CircleBorder(),
                             onTap: pos.cartItems.isEmpty ? null : _showCheckoutDialog,
-                            child: const Column(
+                            child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.payments, color: Colors.white, size: 20),
-                                Text('دفع', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                                const Icon(Icons.payments, color: Colors.white, size: 20),
+                                Text(
+                                  AppStrings.get(context, 'pos_pay'),
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
                               ],
                             ),
                           ),
