@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/customer_provider.dart';
 import '../../models/customer.dart';
+import '../../l10n/app_strings.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -22,14 +23,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('العملاء')),
+      appBar: AppBar(title: Text(AppStrings.get(context, 'cust_title'))),
       body: Consumer<CustomerProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
           if (provider.customers.isEmpty) {
-            return const Center(child: Text('لا يوجد عملاء'));
+            return Center(child: Text(AppStrings.get(context, 'cust_no_customers')));
           }
           return ListView.builder(
             itemCount: provider.customers.length,
@@ -43,7 +44,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddCustomerDialog(context),
         icon: const Icon(Icons.person_add),
-        label: const Text('عميل جديد'),
+        label: Text(AppStrings.get(context, 'cust_new_customer')),
       ),
     );
   }
@@ -55,26 +56,35 @@ class _CustomersScreenState extends State<CustomersScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('إضافة عميل'),
+        title: Text(AppStrings.get(context, 'cust_add_title')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
               textAlign: TextAlign.right,
-              decoration: const InputDecoration(labelText: 'الاسم *', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                labelText: AppStrings.get(context, 'cust_name_required'),
+                border: const OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: phoneController,
               textAlign: TextAlign.right,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'الهاتف', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                labelText: AppStrings.get(context, 'cust_phone'),
+                border: const OutlineInputBorder(),
+              ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppStrings.get(context, 'common_cancel')),
+          ),
           ElevatedButton(
             onPressed: () async {
               if (nameController.text.trim().isEmpty) return;
@@ -86,32 +96,40 @@ class _CustomersScreenState extends State<CustomersScreen> {
               await context.read<CustomerProvider>().addCustomer(customer);
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text('إضافة'),
+            child: Text(AppStrings.get(context, 'common_add')),
           ),
         ],
       ),
     );
   }
 }
+
 void _showPayDebtDialog(BuildContext context, Customer customer) {
   final amountController = TextEditingController();
+  final currency = AppStrings.get(context, 'common_currency');
+  final debtText = AppStrings
+      .get(context, 'cust_current_debt')
+      .replaceAll('{amount}', customer.balance.toStringAsFixed(2))
+      .replaceAll('د.ج', currency)
+      .replaceAll('DA', currency)
+      .replaceAll('DZD', currency);
   showDialog(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('تسديد دين'),
+      title: Text(AppStrings.get(context, 'cust_pay_debt_title')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('الدين الحالي: ${customer.balance.toStringAsFixed(2)} د.ج'),
+          Text(debtText),
           const SizedBox(height: 12),
           TextField(
             controller: amountController,
             autofocus: true,
             textAlign: TextAlign.right,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'المبلغ المدفوع',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: AppStrings.get(context, 'cust_amount_paid'),
+              border: const OutlineInputBorder(),
             ),
           ),
         ],
@@ -119,7 +137,7 @@ void _showPayDebtDialog(BuildContext context, Customer customer) {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: const Text('إلغاء'),
+          child: Text(AppStrings.get(context, 'common_cancel')),
         ),
         ElevatedButton(
           onPressed: () async {
@@ -132,12 +150,13 @@ void _showPayDebtDialog(BuildContext context, Customer customer) {
             await context.read<CustomerProvider>().updateCustomer(updated);
             if (ctx.mounted) Navigator.pop(ctx);
           },
-          child: const Text('تأكيد الدفع'),
+          child: Text(AppStrings.get(context, 'cust_confirm_payment')),
         ),
       ],
     ),
   );
 }
+
 class _CustomerCard extends StatelessWidget {
   final Customer customer;
 
@@ -145,6 +164,11 @@ class _CustomerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currency = AppStrings.get(context, 'common_currency');
+    final loyaltyText = AppStrings
+        .get(context, 'cust_loyalty_points')
+        .replaceAll('{points}', '${customer.loyaltyPoints}');
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: ListTile(
@@ -157,30 +181,30 @@ class _CustomerCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (customer.phone != null) Text(customer.phone!),
-            Text('نقاط الولاء: ${customer.loyaltyPoints}'),
+            Text(loyaltyText),
           ],
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-                Text(
-                  '${customer.balance.toStringAsFixed(2)} د.ج',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: customer.balance > 0 ? Colors.red : const Color(0xFF43A047),
-                  ),
-                ),
-                const Text('الرصيد', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                if (customer.balance > 0)
-                  IconButton(
-                    icon: const Icon(Icons.payments, color: Colors.green, size: 20),
-                    tooltip: 'تسديد دين',
-                    onPressed: () => _showPayDebtDialog(context, customer),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-              ],
+            Text(
+              '${customer.balance.toStringAsFixed(2)} $currency',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: customer.balance > 0 ? Colors.red : const Color(0xFF43A047),
+              ),
+            ),
+            Text(AppStrings.get(context, 'cust_balance'), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            if (customer.balance > 0)
+              IconButton(
+                icon: const Icon(Icons.payments, color: Colors.green, size: 20),
+                tooltip: AppStrings.get(context, 'cust_pay_debt_title'),
+                onPressed: () => _showPayDebtDialog(context, customer),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+          ],
         ),
       ),
     );
