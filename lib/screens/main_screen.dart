@@ -16,13 +16,32 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const DashboardScreen(),
-    const PosScreen(),
-    const Center(child: Text('Inventory - معطل للتشخيص')),
-    const Center(child: Text('Customers - معطل للتشخيص')),
-    const Center(child: Text('Reports - معطل للتشخيص')),
-    const Center(child: Text('Settings - معطل للتشخيص')),
+  Widget _safe(Widget Function() builder, String name) {
+    try {
+      return builder();
+    } catch (e, st) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              'خطأ في شاشة $name:\n$e',
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  late final List<Widget> _screens = [
+    _safe(() => const DashboardScreen(), 'Dashboard'),
+    _safe(() => const PosScreen(), 'POS'),
+    _safe(() => const InventoryScreen(), 'Inventory'),
+    _safe(() => const CustomersScreen(), 'Customers'),
+    _safe(() => const ReportsScreen(), 'Reports'),
+    _safe(() => const SettingsScreen(), 'Settings'),
   ];
 
   List<String> _titles(BuildContext context) => [
