@@ -53,4 +53,54 @@ class AuthProvider extends ChangeNotifier {
 
   bool get isAdmin => _currentUser?.role == 'admin';
   bool get isManager => _currentUser?.role == 'manager' || isAdmin;
+
+  /// Updates the currently logged-in user's username and/or PIN.
+  /// [currentPin] must match the existing PIN for security.
+  /// Returns a status string: 'success', 'wrong_pin', 'username_taken', or 'error'.
+  Future<String> updateCredentials({
+    required String currentPin,
+    String? newUsername,
+    String? newPin,
+  }) async {
+    if (_currentUser == null) return 'error';
+    final db = DatabaseService();
+
+    if (_currentUser!.pin != currentPin) {
+      return 'wrong_pin';
+    }
+
+    final targetUsername = (newUsername != null && newUsername.trim().isNotEmpty)
+        ? newUsername.trim()
+        : _currentUser!.username;
+
+    if (targetUsername != _currentUser!.username) {
+      final existing = await db.getUserByUsername(targetUsername);
+      if (existing != null) {
+        return 'username_taken';
+      }
+    }
+
+    final targetPin = (newPin != null && newPin.trim().isNotEmpty)
+        ? newPin.trim()
+        : _currentUser!.pin;
+
+    final updatedUser = User(
+      id: _currentUser!.id,
+      username: targetUsername,
+      fullName: _currentUser!.fullName,
+      role: _currentUser!.role,
+      pin: targetPin,
+      isActive: _currentUser!.isActive,
+      createdAt: _currentUser!.createdAt,
+    );
+
+    try {
+      await db.updateUser(updatedUser);
+      _currentUser = updatedUser;
+      notifyListeners();
+      return 'success';
+    } catch (e) {
+      return 'error';
+    }
+  }
 }
