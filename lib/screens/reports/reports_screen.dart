@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/report_provider.dart';
+import '../../l10n/app_strings.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -21,14 +22,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currency = AppStrings.get(context, 'common_currency');
+    final days = AppStrings.get(context, 'rep_days').split('|');
+
     return Scaffold(
-      appBar: AppBar(title: const Text('التقارير')),
+      appBar: AppBar(title: Text(AppStrings.get(context, 'rep_title'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date Range Selector
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -36,7 +39,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   children: [
                     Expanded(
                       child: _DateButton(
-                        label: 'من',
+                        label: AppStrings.get(context, 'rep_from'),
                         onTap: () {},
                       ),
                     ),
@@ -45,7 +48,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _DateButton(
-                        label: 'إلى',
+                        label: AppStrings.get(context, 'rep_to'),
                         onTap: () {},
                       ),
                     ),
@@ -55,29 +58,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Today Stats
             Consumer<ReportProvider>(
               builder: (context, provider, child) {
                 final stats = provider.todayStats;
                 return Column(
                   children: [
                     _ReportCard(
-                      title: 'مبيعات اليوم',
-                      value: '${(stats['salesTotal'] ?? 0.0).toStringAsFixed(2)} د.ج',
+                      title: AppStrings.get(context, 'rep_sales_today'),
+                      value: '${(stats['salesTotal'] ?? 0.0).toStringAsFixed(2)} $currency',
                       icon: Icons.attach_money,
                       color: const Color(0xFF43A047),
                     ),
                     const SizedBox(height: 12),
                     _ReportCard(
-                      title: 'عدد الفواتير',
+                      title: AppStrings.get(context, 'rep_invoice_count'),
                       value: '${stats['salesCount'] ?? 0}',
                       icon: Icons.receipt,
                       color: const Color(0xFF1E88E5),
                     ),
                     const SizedBox(height: 12),
                     _ReportCard(
-                      title: 'الأرباح التقديرية',
-                      value: '${(stats['profit'] ?? 0.0).toStringAsFixed(2)} د.ج',
+                      title: AppStrings.get(context, 'rep_estimated_profit'),
+                      value: '${(stats['profit'] ?? 0.0).toStringAsFixed(2)} $currency',
                       icon: Icons.trending_up,
                       color: const Color(0xFF7E57C2),
                     ),
@@ -87,8 +89,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Sales Chart
-            const Text('مبيعات الأسبوع', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(AppStrings.get(context, 'rep_weekly_sales'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             SizedBox(
               height: 200,
@@ -103,7 +104,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           sideTitles: SideTitles(
                             showTitles: true,
                             getTitlesWidget: (value, meta) {
-                              const days = ['سبت', 'أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة'];
                               if (value.toInt() >= 0 && value.toInt() < days.length) {
                                 return Text(days[value.toInt()], style: const TextStyle(fontSize: 10));
                               }
@@ -132,8 +132,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Top Products
-            const Text('أفضل المنتجات مبيعاً', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(AppStrings.get(context, 'rep_top_products'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Card(
               child: Column(
@@ -236,6 +235,7 @@ class _ProductRankItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currency = AppStrings.get(context, 'common_currency');
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: rank <= 3 ? const Color(0xFFFF9800).withOpacity(0.2) : Colors.grey.withOpacity(0.2),
@@ -245,8 +245,8 @@ class _ProductRankItem extends StatelessWidget {
         )),
       ),
       title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text('$sales مبيعة'),
-      trailing: Text('${revenue.toStringAsFixed(0)} د.ج', style: const TextStyle(fontWeight: FontWeight.bold)),
+      subtitle: Text('$sales ${AppStrings.get(context, 'rep_sold_suffix')}'),
+      trailing: Text('${revenue.toStringAsFixed(0)} $currency', style: const TextStyle(fontWeight: FontWeight.bold)),
     );
   }
 }
