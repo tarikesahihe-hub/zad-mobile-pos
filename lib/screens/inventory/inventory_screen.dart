@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/inventory_provider.dart';
 import '../../models/product.dart';
+import '../../l10n/app_strings.dart';
 import 'product_form_screen.dart';
 import '../pos/barcode_scanner_screen.dart';
 
@@ -39,14 +40,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
         MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)),
       );
     } else {
+      final body = AppStrings
+          .get(context, 'inv_product_not_found_body')
+          .replaceAll('{code}', code);
       final add = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('منتج غير موجود'),
-          content: Text('لا يوجد منتج بالباركود: $code\nهل تريد إضافته؟'),
+          title: Text(AppStrings.get(context, 'inv_product_not_found_title')),
+          content: Text(body),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('إضافة')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(AppStrings.get(context, 'common_cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(AppStrings.get(context, 'common_add')),
+            ),
           ],
         ),
       );
@@ -62,7 +72,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('المخزون والمنتجات'),
+        title: Text(AppStrings.get(context, 'inv_title')),
         actions: [
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
@@ -72,14 +82,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
       ),
       body: Column(
         children: [
-          // Search
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
               controller: _searchController,
               textAlign: TextAlign.right,
               decoration: InputDecoration(
-                hintText: 'ابحث بالاسم أو الباركود...',
+                hintText: AppStrings.get(context, 'inv_search_hint'),
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -93,10 +102,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
           ),
 
-          // Low Stock Warning
           Consumer<InventoryProvider>(
             builder: (context, provider, child) {
               if (provider.lowStockProducts.isEmpty) return const SizedBox.shrink();
+              final text = AppStrings
+                  .get(context, 'inv_low_stock_warning')
+                  .replaceAll('{count}', '${provider.lowStockProducts.length}');
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 padding: const EdgeInsets.all(12),
@@ -111,7 +122,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '${provider.lowStockProducts.length} منتجات على وشك النفاد',
+                        text,
                         style: const TextStyle(color: Colors.orange),
                       ),
                     ),
@@ -121,7 +132,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
             },
           ),
 
-          // Products List
           Expanded(
             child: Consumer<InventoryProvider>(
               builder: (context, provider, child) {
@@ -129,7 +139,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (provider.products.isEmpty) {
-                  return const Center(child: Text('لا توجد منتجات'));
+                  return Center(child: Text(AppStrings.get(context, 'inv_no_products')));
                 }
                 return ListView.builder(
                   itemCount: provider.products.length,
@@ -150,7 +160,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           );
         },
         icon: const Icon(Icons.add),
-        label: const Text('منتج جديد'),
+        label: Text(AppStrings.get(context, 'inv_new_product')),
       ),
     );
   }
@@ -164,6 +174,7 @@ class _ProductListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLowStock = product.quantity <= product.minStock && product.minStock > 0;
+    final currency = AppStrings.get(context, 'common_currency');
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -184,8 +195,14 @@ class _ProductListTile extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (product.barcode != null) Text('باركود: ${product.barcode}', style: const TextStyle(fontSize: 12)),
-            Text('الكمية: ${product.quantity} | الحد الأدنى: ${product.minStock}'),
+            if (product.barcode != null)
+              Text(
+                '${AppStrings.get(context, 'inv_barcode_prefix')} ${product.barcode}',
+                style: const TextStyle(fontSize: 12),
+              ),
+            Text(
+              '${AppStrings.get(context, 'inv_quantity_label')} ${product.quantity} | ${AppStrings.get(context, 'inv_min_stock_label')} ${product.minStock}',
+            ),
           ],
         ),
         trailing: Column(
@@ -193,7 +210,7 @@ class _ProductListTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              '${product.salePrice.toStringAsFixed(2)} د.ج',
+              '${product.salePrice.toStringAsFixed(2)} $currency',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF43A047),
@@ -201,7 +218,7 @@ class _ProductListTile extends StatelessWidget {
               ),
             ),
             Text(
-              'شراء: ${product.purchasePrice.toStringAsFixed(2)} د.ج',
+              '${AppStrings.get(context, 'inv_purchase_label')} ${product.purchasePrice.toStringAsFixed(2)} $currency',
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
