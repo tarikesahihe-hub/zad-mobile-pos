@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/report_provider.dart';
 import '../providers/ai_provider.dart';
 import '../providers/auth_provider.dart';
+import '../l10n/app_strings.dart';
 import 'pos/pos_screen.dart';
 import 'ai_assistant_screen.dart';
 
@@ -17,7 +18,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // TEMPORARILY DISABLED FOR DIAGNOSIS
   }
 
   @override
@@ -50,7 +50,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Quick Action Button
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -61,9 +60,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     );
                   },
                   icon: const Icon(Icons.add_shopping_cart, size: 28),
-                  label: const Text(
-                    'بيع جديد',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  label: Text(
+                    AppStrings.get(context, 'dash_new_sale'),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF9800),
@@ -76,7 +75,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Stats Cards
               Consumer<ReportProvider>(
                 builder: (context, provider, child) {
                   final stats = provider.dashboardStats;
@@ -89,32 +87,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     childAspectRatio: 1.3,
                     children: [
                       _StatCard(
-                        title: 'مبيعات اليوم',
+                        title: AppStrings.get(context, 'dash_sales_today'),
                         value: '${(stats['salesTotal'] ?? 0.0).toStringAsFixed(0)} د.ج',
                         icon: Icons.attach_money,
                         color: const Color(0xFF43A047),
-                        subtitle: '${stats['salesCount'] ?? 0} فاتورة',
+                        subtitle: '${stats['salesCount'] ?? 0} ${AppStrings.get(context, 'dash_invoice_count')}',
                       ),
                       _StatCard(
-                        title: 'الأرباح',
+                        title: AppStrings.get(context, 'dash_profit'),
                         value: '${(stats['profit'] ?? 0.0).toStringAsFixed(0)} د.ج',
                         icon: Icons.trending_up,
                         color: const Color(0xFF1E88E5),
-                        subtitle: 'هامش تقديري',
+                        subtitle: AppStrings.get(context, 'dash_profit_margin'),
                       ),
                       _StatCard(
-                        title: 'المنتجات',
+                        title: AppStrings.get(context, 'dash_products'),
                         value: '${stats['productCount'] ?? 0}',
                         icon: Icons.inventory_2,
                         color: const Color(0xFF7E57C2),
-                        subtitle: 'صنف نشط',
+                        subtitle: AppStrings.get(context, 'dash_active_item'),
                       ),
                       _StatCard(
-                        title: 'نقص المخزون',
+                        title: AppStrings.get(context, 'dash_low_stock'),
                         value: '${stats['lowStockCount'] ?? 0}',
                         icon: Icons.warning_amber,
                         color: const Color(0xFFE53935),
-                        subtitle: 'يحتاج طلب',
+                        subtitle: AppStrings.get(context, 'dash_needs_order'),
                       ),
                     ],
                   );
@@ -122,10 +120,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 20),
 
-              // AI Insights
-              const Text(
-                'تنبيهات ذكية',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Text(
+                AppStrings.get(context, 'dash_smart_alerts'),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               Consumer<AiProvider>(
@@ -161,7 +158,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 20),
 
-              // AI Assistant Button
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -171,7 +167,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     );
                   },
                   icon: const Icon(Icons.smart_toy),
-                  label: const Text('المساعد الذكي'),
+                  label: Text(AppStrings.get(context, 'dash_ai_assistant')),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.all(16),
                     shape: RoundedRectangleBorder(
