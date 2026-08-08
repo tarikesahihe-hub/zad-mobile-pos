@@ -19,9 +19,11 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePin = true;
   String? _error;
 
-  static const Color _zadGreen = Color(0xFF0E3B2E);
-  static const Color _zadGreenDark = Color(0xFF08221A);
-  static const Color _zadGold = Color(0xFFD4AF37);
+  static const Color _zadBlueDark = Color(0xFF0D47A1);
+  static const Color _zadBlue = Color(0xFF1E88E5);
+  static const Color _zadBlueLight = Color(0xFF64B5F6);
+  static const Color _zadOrange = Color(0xFFFF9800);
+  static const Color _zadOrangeDark = Color(0xFFF57C00);
 
   @override
   void initState() {
@@ -97,9 +99,10 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [_zadGreenDark, _zadGreen],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_zadBlueDark, _zadBlue, _zadBlueLight],
+            stops: [0.0, 0.55, 1.0],
           ),
         ),
         child: SafeArea(
@@ -118,18 +121,19 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 96,
                           height: 96,
                           decoration: BoxDecoration(
+                            color: Colors.white,
                             shape: BoxShape.circle,
-                            border: Border.all(color: _zadGold, width: 2.5),
+                            border: Border.all(color: _zadOrange, width: 3),
                             boxShadow: [
                               BoxShadow(
-                                color: _zadGold.withOpacity(0.35),
-                                blurRadius: 20,
+                                color: _zadOrange.withOpacity(0.45),
+                                blurRadius: 22,
                                 spreadRadius: 2,
                               ),
                             ],
                           ),
                           child: const Icon(Icons.storefront_rounded,
-                              color: _zadGold, size: 48),
+                              color: _zadBlue, size: 48),
                         ),
                         const SizedBox(height: 18),
                         const Text(
@@ -142,11 +146,19 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        Text(
-                          'نظام نقطة البيع الذكي',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.75),
-                            fontSize: 14,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _zadOrange,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'نظام نقطة البيع الذكي',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 36),
@@ -168,15 +180,21 @@ class _LoginScreenState extends State<LoginScreen> {
                               TextField(
                                 controller: _usernameController,
                                 textAlign: TextAlign.right,
+                                cursorColor: _zadBlue,
                                 decoration: InputDecoration(
                                   labelText: 'اسم المستخدم',
+                                  labelStyle: const TextStyle(color: _zadBlue),
                                   prefixIcon:
-                                      const Icon(Icons.person_outline, color: _zadGreen),
+                                      const Icon(Icons.person_outline, color: _zadBlue),
                                   filled: true,
-                                  fillColor: const Color(0xFFF5F7F6),
+                                  fillColor: const Color(0xFFF3F8FE),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
                                     borderSide: BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: const BorderSide(color: _zadBlue, width: 1.5),
                                   ),
                                 ),
                               ),
@@ -186,25 +204,31 @@ class _LoginScreenState extends State<LoginScreen> {
                                 obscureText: _obscurePin,
                                 textAlign: TextAlign.right,
                                 keyboardType: TextInputType.number,
+                                cursorColor: _zadBlue,
                                 decoration: InputDecoration(
                                   labelText: 'رمز الدخول',
+                                  labelStyle: const TextStyle(color: _zadBlue),
                                   prefixIcon:
-                                      const Icon(Icons.lock_outline, color: _zadGreen),
+                                      const Icon(Icons.lock_outline, color: _zadBlue),
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscurePin
                                           ? Icons.visibility_off_outlined
                                           : Icons.visibility_outlined,
-                                      color: Colors.grey,
+                                      color: _zadOrange,
                                     ),
                                     onPressed: () =>
                                         setState(() => _obscurePin = !_obscurePin),
                                   ),
                                   filled: true,
-                                  fillColor: const Color(0xFFF5F7F6),
+                                  fillColor: const Color(0xFFF3F8FE),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
                                     borderSide: BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: const BorderSide(color: _zadBlue, width: 1.5),
                                   ),
                                 ),
                               ),
@@ -232,12 +256,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 child: ElevatedButton(
                                   onPressed: _isLoading ? null : _login,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: _zadGreen,
+                                    backgroundColor: _zadOrange,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14),
                                     ),
-                                    elevation: 2,
+                                    elevation: 3,
+                                    shadowColor: _zadOrangeDark,
                                   ),
                                   child: _isLoading
                                       ? const SizedBox(
@@ -277,15 +302,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                   onTap: _loginWithBiometrics,
                                   borderRadius: BorderRadius.circular(50),
                                   child: Container(
-                                    width: 56,
-                                    height: 56,
+                                    width: 58,
+                                    height: 58,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: _zadGold.withOpacity(0.12),
-                                      border: Border.all(color: _zadGold, width: 1.5),
+                                      color: _zadBlue.withOpacity(0.08),
+                                      border: Border.all(color: _zadOrange, width: 2),
                                     ),
                                     child: const Icon(Icons.fingerprint,
-                                        color: _zadGreen, size: 32),
+                                        color: _zadBlue, size: 34),
                                   ),
                                 ),
                                 const SizedBox(height: 6),
