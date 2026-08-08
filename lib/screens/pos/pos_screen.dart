@@ -307,7 +307,8 @@ class _PosScreenState extends State<PosScreen> {
       ),
     );
   }
-void _showCheckoutDialog() {
+
+  void _showCheckoutDialog() {
     final pos = context.read<PosProvider>();
     final currency = AppStrings.get(context, 'common_currency');
     String localPaymentMethod = pos.paymentMethod == 'CASH' || pos.paymentMethod.isEmpty
@@ -347,24 +348,61 @@ void _showCheckoutDialog() {
                           customerProvider.loadCustomers();
                         });
                       }
-                      return DropdownButtonFormField<Customer>(
-                        decoration: InputDecoration(
-                          labelText: AppStrings.get(context, 'pos_select_customer'),
-                        ),
-                        value: selectedCustomer,
-                        items: customerProvider.customers
-                            .map((c) => DropdownMenuItem(
-                                  value: c,
-                                  child: Text(
-                                    '${c.name}${c.balance > 0 ? " (${AppStrings.get(context, 'pos_debt_suffix')}: ${c.balance.toStringAsFixed(0)} $currency)" : ""}',
-                                  ),
-                                ))
-                            .toList(),
-                        onChanged: (customer) {
-                          setDialogState(() => selectedCustomer = customer);
-                          if (customer != null) {
-                            pos.setCustomer(customer.id, customer.name);
+                      return Autocomplete<Customer>(
+                        displayStringForOption: (c) => c.name,
+                        optionsBuilder: (textEditingValue) {
+                          if (textEditingValue.text.isEmpty) {
+                            return customerProvider.customers;
                           }
+                          return customerProvider.customers.where((c) => c.name
+                              .toLowerCase()
+                              .contains(textEditingValue.text.toLowerCase()));
+                        },
+                        onSelected: (customer) {
+                          setDialogState(() => selectedCustomer = customer);
+                          pos.setCustomer(customer.id, customer.name);
+                        },
+                        fieldViewBuilder: (context, textController, focusNode, onSubmit) {
+                          if (selectedCustomer != null && textController.text.isEmpty) {
+                            textController.text = selectedCustomer!.name;
+                          }
+                          return TextField(
+                            controller: textController,
+                            focusNode: focusNode,
+                            textAlign: TextAlign.right,
+                            decoration: InputDecoration(
+                              labelText: AppStrings.get(context, 'pos_select_customer'),
+                              prefixIcon: const Icon(Icons.search),
+                              border: const OutlineInputBorder(),
+                            ),
+                          );
+                        },
+                        optionsViewBuilder: (context, onSelected, options) {
+                          return Align(
+                            alignment: Alignment.topRight,
+                            child: Material(
+                              elevation: 4,
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxHeight: 220),
+                                child: ListView.builder(
+                                  padding: EdgeInsets.zero,
+                                  shrinkWrap: true,
+                                  itemCount: options.length,
+                                  itemBuilder: (context, index) {
+                                    final c = options.elementAt(index);
+                                    final debtSuffix = c.balance > 0
+                                        ? ' (${AppStrings.get(context, 'pos_debt_suffix')}: ${c.balance.toStringAsFixed(0)} $currency)'
+                                        : '';
+                                    return ListTile(
+                                      dense: true,
+                                      title: Text('${c.name}$debtSuffix'),
+                                      onTap: () => onSelected(c),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          );
                         },
                       );
                     },
