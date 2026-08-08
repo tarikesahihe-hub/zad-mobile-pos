@@ -5,6 +5,7 @@ import 'inventory/inventory_screen.dart';
 import 'customers/customers_screen.dart';
 import 'reports/reports_screen.dart';
 import 'settings/settings_screen.dart';
+import 'suppliers/suppliers_screen.dart';
 import '../l10n/app_strings.dart';
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -40,6 +41,7 @@ class _MainScreenState extends State<MainScreen> {
     _safe(() => const PosScreen(), 'POS'),
     _safe(() => const InventoryScreen(), 'Inventory'),
     _safe(() => const CustomersScreen(), 'Customers'),
+    _safe(() => const SuppliersScreen(), 'Suppliers'),
     _safe(() => const ReportsScreen(), 'Reports'),
     _safe(() => const SettingsScreen(), 'Settings'),
   ];
@@ -49,6 +51,7 @@ class _MainScreenState extends State<MainScreen> {
     AppStrings.get(context, 'nav_pos'),
     AppStrings.get(context, 'nav_inventory'),
     AppStrings.get(context, 'nav_customers'),
+    AppStrings.get(context, 'nav_suppliers'),
     AppStrings.get(context, 'nav_reports'),
     AppStrings.get(context, 'nav_settings'),
   ];
@@ -58,6 +61,7 @@ class _MainScreenState extends State<MainScreen> {
     Icons.point_of_sale,
     Icons.inventory_2,
     Icons.people,
+    Icons.local_shipping,
     Icons.bar_chart,
     Icons.settings,
   ];

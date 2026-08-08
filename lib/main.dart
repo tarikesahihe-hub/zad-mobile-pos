@@ -11,6 +11,7 @@ import 'providers/customer_provider.dart';
 import 'providers/report_provider.dart';
 import 'providers/sync_provider.dart';
 import 'providers/ai_provider.dart';
+import 'providers/supplier_provider.dart';
 import 'screens/splash_screen.dart';
 import 'utils/app_theme.dart';
 
@@ -71,6 +72,7 @@ class ZadMobileApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ReportProvider()),
         ChangeNotifierProvider(create: (_) => SyncProvider()),
         ChangeNotifierProvider(create: (_) => AiProvider()),
+        ChangeNotifierProvider(create: (_) => SupplierProvider()),
       ],
       child: Consumer<AppProvider>(
         builder: (context, appProvider, child) {
