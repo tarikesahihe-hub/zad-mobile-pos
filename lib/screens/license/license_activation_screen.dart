@@ -48,7 +48,15 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
     if (!mounted) return;
     setState(() => _loading = false);
     if (error == null) {
-      if (mounted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم التفعيل بنجاح ✅')),
+      );
+      // إذا فُتحت هذه الشاشة من داخل التطبيق (مثلاً من الإعدادات وأنتِ مسجلة دخول)
+      // نرجع للخلف مباشرة بدل ما نعيد المستخدم لشاشة الدخول.
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
@@ -71,7 +79,6 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        automaticallyImplyLeading: false,
         title: const Text('تفعيل ZAD Mobile POS'),
       ),
       body: Column(
