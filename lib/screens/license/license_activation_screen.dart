@@ -10,11 +10,8 @@ class LicenseActivationScreen extends StatefulWidget {
   State<LicenseActivationScreen> createState() => _LicenseActivationScreenState();
 }
 
-class _LicenseActivationScreenState extends State<LicenseActivationScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
   final _lifetimeKeyController = TextEditingController();
-  final _subKeyController = TextEditingController();
 
   String? _deviceCode;
   bool _loading = false;
@@ -24,7 +21,6 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _loadDeviceCode();
     _loadTrialInfo();
   }
@@ -62,33 +58,9 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
     }
   }
 
-  Future<void> _activateSubscription() async {
-    if (_subKeyController.text.trim().isEmpty) {
-      setState(() => _error = 'أدخل مفتاح الاشتراك أولاً');
-      return;
-    }
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    final error = await LicenseService().activateSubscription(_subKeyController.text);
-    if (!mounted) return;
-    setState(() => _loading = false);
-    if (error == null) {
-      if (mounted) setState(() => _trialDaysLeft = null);
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-    } else {
-      setState(() => _error = error);
-    }
-  }
-
   @override
   void dispose() {
-    _tabController.dispose();
     _lifetimeKeyController.dispose();
-    _subKeyController.dispose();
     super.dispose();
   }
 
@@ -101,14 +73,6 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
         elevation: 0,
         automaticallyImplyLeading: false,
         title: const Text('تفعيل ZAD Mobile POS'),
-        bottom: TabBar(
-          controller: _tabController,
-          onTap: (_) => setState(() => _error = null),
-          tabs: const [
-            Tab(text: 'مدى الحياة (بدون نت)'),
-            Tab(text: 'اشتراك سنوي (بالنت)'),
-          ],
-        ),
       ),
       body: Column(
         children: [
@@ -132,19 +96,12 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
                 ),
               ),
             ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildLifetimeTab(),
-                _buildSubscriptionTab(),
-              ],
-            ),
-          ),
+          Expanded(child: _buildLifetimeTab()),
         ],
       ),
     );
   }
+
   Widget _buildCard({required List<Widget> children}) {
     return SafeArea(
       child: Center(
@@ -211,7 +168,7 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
         ),
       ),
       const SizedBox(height: 16),
-                
+
                 TextField(
                   controller: _lifetimeKeyController,
         textAlign: TextAlign.center,
@@ -241,50 +198,6 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
                   width: 22, height: 22,
                   child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
               : const Text('تفعيل مدى الحياة'),
-        ),
-      ),
-    ]);
-  }
-
-  Widget _buildSubscriptionTab() {
-    return _buildCard(children: [
-      const Icon(Icons.cloud_sync, size: 48, color: Color(0xFF1E88E5)),
-      const SizedBox(height: 12),
-      const Text(
-        'يتطلب اتصالاً بالإنترنت عند التفعيل، وتحقق دوري كل بضعة أيام للحفاظ على الاشتراك فعالاً.',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: Colors.black87),
-      ),
-      const SizedBox(height: 20),
-      TextField(
-        controller: _subKeyController,
-        textAlign: TextAlign.center,
-        textCapitalization: TextCapitalization.characters,
-        decoration: const InputDecoration(
-          labelText: 'مفتاح الاشتراك',
-          hintText: 'ZAD-XXXX-XXXX-XXXX-XXXX',
-          border: OutlineInputBorder(),
-        ),
-      ),
-      if (_error != null) ...[
-        const SizedBox(height: 12),
-        Text(_error!, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
-      ],
-      const SizedBox(height: 16),
-      SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: _loading ? null : _activateSubscription,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1E88E5),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-          child: _loading
-              ? const SizedBox(
-                  width: 22, height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
-              : const Text('تفعيل الاشتراك'),
         ),
       ),
     ]);

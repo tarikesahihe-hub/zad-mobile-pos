@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../providers/auth_provider.dart';
 import 'main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -29,6 +32,20 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _checkBiometrics();
+    _loadLastUsername();
+  }
+
+  Future<void> _loadLastUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('last_username');
+    if (saved != null && saved.isNotEmpty && mounted) {
+      setState(() => _usernameController.text = saved);
+    }
+  }
+
+  Future<void> _saveLastUsername(String username) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('last_username', username);
   }
 
   Future<void> _checkBiometrics() async {
@@ -44,18 +61,27 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    final username = _usernameController.text.trim();
+    final pin = _pinController.text.trim();
+
+    if (username.isEmpty || pin.isEmpty) {
+      setState(() => _error = 'أدخلي اسم المستخدم ورمز الدخول');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
-    await Future.delayed(const Duration(milliseconds: 300));
-    const success = true;
+    final success = await context.read<AuthProvider>().login(username, pin);
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (success) {
+      await _saveLastUsername(username);
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainScreen()),
       );
@@ -66,6 +92,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _loginWithBiometrics() async {
     setState(() => _error = null);
+    final username = _usernameController.text.trim();
+    if (username.isEmpty) {
+      setState(() => _error = 'أدخلي اسم المستخدم أولاً باش تستعملي البصمة');
+      return;
+    }
     try {
       final authenticated = await _localAuth.authenticate(
         localizedReason: 'استخدم بصمتك لتسجيل الدخول إلى ZAD POS',
@@ -74,10 +105,19 @@ class _LoginScreenState extends State<LoginScreen> {
           stickyAuth: true,
         ),
       );
-      if (authenticated && mounted) {
+      if (!authenticated || !mounted) return;
+
+      final success = await context.read<AuthProvider>().loginWithBiometrics(username);
+      if (!mounted) return;
+
+      if (success) {
+        await _saveLastUsername(username);
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const MainScreen()),
         );
+      } else {
+        setState(() => _error = 'المستخدم "$username" غير موجود أو غير نشط');
       }
     } catch (_) {
       if (mounted) {
@@ -205,6 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 textAlign: TextAlign.right,
                                 keyboardType: TextInputType.number,
                                 cursorColor: _zadBlue,
+                                onSubmitted: (_) => _login(),
                                 decoration: InputDecoration(
                                   labelText: 'رمز الدخول',
                                   labelStyle: const TextStyle(color: _zadBlue),
