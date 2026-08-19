@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/backup_service.dart';
 import '../../providers/app_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/license_service.dart';
 import '../../l10n/app_strings.dart';
 import '../license/license_gate_screen.dart';
@@ -84,6 +85,252 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SnackBar(content: Text(AppStrings.get(context, 'set_restore_success'))),
       );
     }
+  }
+
+  Widget _buildBusinessInfoSection() {
+    return Consumer<AppProvider>(
+      builder: (context, appProvider, _) {
+        return Card(
+          margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.storefront, color: Color(0xFF1E88E5)),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppStrings.get(context, 'set_business_title'),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  AppStrings.get(context, 'set_business_subtitle'),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                if (appProvider.businessName.isNotEmpty || appProvider.businessType.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${appProvider.businessName.isEmpty ? '-' : appProvider.businessName}'
+                        '${appProvider.businessType.isEmpty ? '' : ' • ${appProvider.businessType}'}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showEditBusinessInfoDialog(context, appProvider),
+                    icon: const Icon(Icons.edit),
+                    label: Text(AppStrings.get(context, 'set_business_title')),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showEditBusinessInfoDialog(BuildContext context, AppProvider appProvider) {
+    final nameController = TextEditingController(text: appProvider.businessName);
+    final typeController = TextEditingController(text: appProvider.businessType);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(AppStrings.get(context, 'set_business_title')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                textAlign: TextAlign.right,
+                decoration: InputDecoration(
+                  labelText: AppStrings.get(context, 'set_business_name_label'),
+                  hintText: AppStrings.get(context, 'set_business_name_hint'),
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: typeController,
+                textAlign: TextAlign.right,
+                decoration: InputDecoration(
+                  labelText: AppStrings.get(context, 'set_business_type_label'),
+                  hintText: AppStrings.get(context, 'set_business_type_hint'),
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppStrings.get(context, 'common_cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await appProvider.setBusinessInfo(
+                name: nameController.text.trim(),
+                type: typeController.text.trim(),
+              );
+              if (!context.mounted) return;
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(AppStrings.get(context, 'set_business_save_success'))),
+              );
+            },
+            child: Text(AppStrings.get(context, 'common_save')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccountSection() {
+    return Consumer<AuthProvider>(
+      builder: (context, auth, _) {
+        final user = auth.currentUser;
+        if (user == null) return const SizedBox.shrink();
+        return Card(
+          margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.person, color: Color(0xFF1E88E5)),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppStrings.get(context, 'set_account_title'),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  AppStrings.get(context, 'set_current_username_label').replaceAll('{username}', user.username),
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showChangeCredentialsDialog(context),
+                    icon: const Icon(Icons.edit),
+                    label: Text(AppStrings.get(context, 'set_account_title')),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showChangeCredentialsDialog(BuildContext context) {
+    final currentPinController = TextEditingController();
+    final newUsernameController = TextEditingController();
+    final newPinController = TextEditingController();
+    String? errorMessage;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(AppStrings.get(context, 'set_account_title')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: currentPinController,
+                  obscureText: true,
+                  textAlign: TextAlign.right,
+                  decoration: InputDecoration(
+                    labelText: AppStrings.get(context, 'set_current_pin'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: newUsernameController,
+                  textAlign: TextAlign.right,
+                  decoration: InputDecoration(
+                    labelText: AppStrings.get(context, 'set_new_username'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: newPinController,
+                  obscureText: true,
+                  textAlign: TextAlign.right,
+                  decoration: InputDecoration(
+                    labelText: AppStrings.get(context, 'set_new_pin'),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                if (errorMessage != null) ...[
+                  const SizedBox(height: 10),
+                  Text(errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(AppStrings.get(context, 'common_cancel')),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (currentPinController.text.trim().isEmpty) return;
+                final result = await context.read<AuthProvider>().updateCredentials(
+                      currentPin: currentPinController.text.trim(),
+                      newUsername: newUsernameController.text.trim().isEmpty
+                          ? null
+                          : newUsernameController.text.trim(),
+                      newPin: newPinController.text.trim().isEmpty
+                          ? null
+                          : newPinController.text.trim(),
+                    );
+                if (!context.mounted) return;
+                if (result == 'success') {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(AppStrings.get(context, 'set_update_success'))),
+                  );
+                } else {
+                  final key = result == 'wrong_pin'
+                      ? 'set_wrong_pin'
+                      : result == 'username_taken'
+                          ? 'set_username_taken'
+                          : 'set_update_error';
+                  setDialogState(() => errorMessage = AppStrings.get(context, key));
+                }
+              },
+              child: Text(AppStrings.get(context, 'set_save_changes')),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildLanguageSection() {
@@ -232,6 +479,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         children: [
           _buildLicenseSection(),
+          _buildAccountSection(),
+          _buildBusinessInfoSection(),
           _buildLanguageSection(),
           _buildBackupHeader(),
           Padding(
