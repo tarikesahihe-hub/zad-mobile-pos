@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/sale.dart';
 import '../../services/printer_service.dart';
 import '../../services/database_service.dart';
+import '../../providers/app_provider.dart';
 import '../invoices/invoice_edit_screen.dart';
 
 class SaleReceiptScreen extends StatelessWidget {
@@ -12,6 +14,10 @@ class SaleReceiptScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appProvider = context.watch<AppProvider>();
+    final businessName = appProvider.businessName.isEmpty ? 'ZAD Store' : appProvider.businessName;
+    final businessType = appProvider.businessType;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('فاتورة المبيعات'),
@@ -35,7 +41,7 @@ class SaleReceiptScreen extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.share),
-            onPressed: _shareReceipt,
+            onPressed: () => _shareReceipt(businessName, businessType),
           ),
         ],
       ),
@@ -53,10 +59,15 @@ class SaleReceiptScreen extends StatelessWidget {
                     // Header
                     const Icon(Icons.point_of_sale, size: 48, color: Color(0xFF1E88E5)),
                     const SizedBox(height: 8),
-                    const Text(
-                      'ZAD Store',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    Text(
+                      businessName,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
+                    if (businessType.isNotEmpty)
+                      Text(
+                        businessType,
+                        style: const TextStyle(fontSize: 13, color: Colors.black54),
+                      ),
                     const Text('فاتورة مبيعات', style: TextStyle(color: Colors.grey)),
                     const SizedBox(height: 16),
                     const Divider(),
@@ -292,9 +303,10 @@ class SaleReceiptScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _shareReceipt() async {
+  Future<void> _shareReceipt(String businessName, String businessType) async {
     final buffer = StringBuffer();
-    buffer.writeln('ZAD Store - فاتورة مبيعات');
+    buffer.writeln('$businessName${businessType.isEmpty ? '' : ' - $businessType'}');
+    buffer.writeln('فاتورة مبيعات');
     buffer.writeln('رقم الفاتورة: ${sale.invoiceNumber}');
     buffer.writeln('التاريخ: ${_formatDate(sale.date)}');
     if (sale.customerName != null) buffer.writeln('العميل: ${sale.customerName}');
