@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../models/sale.dart';
 import '../../services/printer_service.dart';
 import '../../services/database_service.dart';
+import '../../services/license_service.dart';
 import '../../providers/app_provider.dart';
 import '../invoices/invoice_edit_screen.dart';
 
@@ -41,7 +42,10 @@ class SaleReceiptScreen extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.share),
-            onPressed: () => _shareReceipt(businessName, businessType),
+            onPressed: () async {
+              final managerName = await LicenseService().getManagerName();
+              await _shareReceipt(businessName, businessType, managerName);
+            },
           ),
         ],
       ),
@@ -181,6 +185,20 @@ class SaleReceiptScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     const Text('شكراً لزيارتكم', style: TextStyle(color: Colors.grey)),
                     const Text('ZAD Mobile POS', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    FutureBuilder<String>(
+                      future: LicenseService().getManagerName(),
+                      builder: (context, snapshot) {
+                        final managerName = snapshot.data ?? '';
+                        if (managerName.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            'المسؤول: $managerName',
+                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -303,7 +321,7 @@ class SaleReceiptScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _shareReceipt(String businessName, String businessType) async {
+  Future<void> _shareReceipt(String businessName, String businessType, String managerName) async {
     final buffer = StringBuffer();
     buffer.writeln('$businessName${businessType.isEmpty ? '' : ' - $businessType'}');
     buffer.writeln('فاتورة مبيعات');
@@ -325,6 +343,7 @@ class SaleReceiptScreen extends StatelessWidget {
       buffer.writeln('المتبقي كدين: ${(sale.total - sale.amountPaid).toStringAsFixed(2)} د.ج');
     }
     buffer.writeln('طريقة الدفع: ${_getPaymentMethodName(sale.paymentMethod)}');
+    if (managerName.isNotEmpty) buffer.writeln('المسؤول: $managerName');
     buffer.writeln('شكراً لزيارتكم - ZAD Mobile POS');
 
     await Share.share(buffer.toString(), subject: 'فاتورة ${sale.invoiceNumber}');

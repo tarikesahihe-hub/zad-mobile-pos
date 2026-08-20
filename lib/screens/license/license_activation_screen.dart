@@ -10,8 +10,14 @@ class LicenseActivationScreen extends StatefulWidget {
   State<LicenseActivationScreen> createState() => _LicenseActivationScreenState();
 }
 
-class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
+class _LicenseActivationScreenState extends State<LicenseActivationScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
   final _lifetimeKeyController = TextEditingController();
+  final _lifetimeManagerController = TextEditingController();
+  final _secondaryKeyController = TextEditingController();
+  final _secondaryManagerController = TextEditingController();
 
   String? _deviceCode;
   bool _loading = false;
@@ -21,6 +27,7 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadDeviceCode();
     _loadTrialInfo();
   }
@@ -35,25 +42,13 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
     if (mounted) setState(() => _deviceCode = code);
   }
 
-  Future<void> _activateLifetime() async {
-    if (_lifetimeKeyController.text.trim().isEmpty) {
-      setState(() => _error = 'أدخل مفتاح الترخيص أولاً');
-      return;
-    }
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    final error = await LicenseService().activateLifetime(_lifetimeKeyController.text);
+  void _handleActivationResult(String? error) {
     if (!mounted) return;
     setState(() => _loading = false);
     if (error == null) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم التفعيل بنجاح ✅')),
       );
-      // إذا فُتحت هذه الشاشة من داخل التطبيق (مثلاً من الإعدادات وأنتِ مسجلة دخول)
-      // نرجع للخلف مباشرة بدل ما نعيد المستخدم لشاشة الدخول.
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       } else {
@@ -66,9 +61,53 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
     }
   }
 
+  Future<void> _activateLifetime() async {
+    if (_lifetimeKeyController.text.trim().isEmpty) {
+      setState(() => _error = 'أدخل مفتاح الترخيص أولاً');
+      return;
+    }
+    if (_lifetimeManagerController.text.trim().isEmpty) {
+      setState(() => _error = 'أدخل اسم المسؤول عن الجهاز');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final error = await LicenseService().activateLifetime(
+      _lifetimeKeyController.text,
+      managerName: _lifetimeManagerController.text,
+    );
+    _handleActivationResult(error);
+  }
+
+  Future<void> _activateSecondary() async {
+    if (_secondaryKeyController.text.trim().isEmpty) {
+      setState(() => _error = 'أدخل المفتاح الثانوي أولاً');
+      return;
+    }
+    if (_secondaryManagerController.text.trim().isEmpty) {
+      setState(() => _error = 'أدخل اسم المسؤول عن الجهاز');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final error = await LicenseService().activateSecondary(
+      _secondaryKeyController.text,
+      managerName: _secondaryManagerController.text,
+    );
+    _handleActivationResult(error);
+  }
+
   @override
   void dispose() {
+    _tabController.dispose();
     _lifetimeKeyController.dispose();
+    _lifetimeManagerController.dispose();
+    _secondaryKeyController.dispose();
+    _secondaryManagerController.dispose();
     super.dispose();
   }
 
@@ -80,6 +119,14 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text('تفعيل ZAD Mobile POS'),
+        bottom: TabBar(
+          controller: _tabController,
+          onTap: (_) => setState(() => _error = null),
+          tabs: const [
+            Tab(text: 'الجهاز الرئيسي'),
+            Tab(text: 'جهاز ثانوي'),
+          ],
+        ),
       ),
       body: Column(
         children: [
@@ -103,7 +150,15 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
                 ),
               ),
             ),
-          Expanded(child: _buildLifetimeTab()),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildLifetimeTab(),
+                _buildSecondaryTab(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -127,6 +182,46 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
     );
   }
 
+  Widget _buildDeviceCodeBox() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        children: [
+          const Text('رمز الجهاز', style: TextStyle(fontSize: 12, color: Colors.black54)),
+          const SizedBox(height: 4),
+          Text(
+            _deviceCode ?? '...جاري التحميل',
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: _deviceCode == null ? null : () async {
+                    try {
+                      await Clipboard.setData(ClipboardData(text: _deviceCode!));
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نسخ رمز الجهاز')));
+                    } catch (e) {
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('فشل النسخ: ' + e.toString())));
+                    }
+                  },
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text('نسخ الرمز'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLifetimeTab() {
     return _buildCard(children: [
       const Icon(Icons.all_inclusive, size: 48, color: Color(0xFF1E88E5)),
@@ -137,47 +232,20 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
         style: TextStyle(color: Colors.black87),
       ),
       const SizedBox(height: 16),
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Column(
-          children: [
-            const Text('رمز الجهاز', style: TextStyle(fontSize: 12, color: Colors.black54)),
-            const SizedBox(height: 4),
-            Text(
-              _deviceCode ?? '...جاري التحميل',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextButton.icon(
-              onPressed: _deviceCode == null ? null : () async {
-                      try {
-                        await Clipboard.setData(ClipboardData(text: _deviceCode!));
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نسخ رمز الجهاز')));
-                      } catch (e) {
-                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('فشل النسخ: ' + e.toString())));
-                      }
-                    },
-              icon: const Icon(Icons.copy, size: 18),
-              label: const Text('نسخ الرمز'),
-            ),
-          ],
+      _buildDeviceCodeBox(),
+      const SizedBox(height: 16),
+      TextField(
+        controller: _lifetimeManagerController,
+        textAlign: TextAlign.center,
+        decoration: const InputDecoration(
+          labelText: 'اسم المسؤول عن الجهاز',
+          hintText: 'يظهر صغيراً أسفل كل فاتورة',
+          border: OutlineInputBorder(),
         ),
       ),
-      const SizedBox(height: 16),
-
-                TextField(
-                  controller: _lifetimeKeyController,
+      const SizedBox(height: 12),
+      TextField(
+        controller: _lifetimeKeyController,
         textAlign: TextAlign.center,
         textCapitalization: TextCapitalization.characters,
         decoration: const InputDecoration(
@@ -205,6 +273,62 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen> {
                   width: 22, height: 22,
                   child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
               : const Text('تفعيل مدى الحياة'),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildSecondaryTab() {
+    return _buildCard(children: [
+      const Icon(Icons.devices_other, size: 48, color: Color(0xFF1E88E5)),
+      const SizedBox(height: 12),
+      const Text(
+        'للأجهزة التابعة لنفس المتجر. أرسل "رمز الجهاز" هذا لصاحب الجهاز الرئيسي للحصول على مفتاح ثانوي خاص بهذا الجهاز.',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: Colors.black87),
+      ),
+      const SizedBox(height: 16),
+      _buildDeviceCodeBox(),
+      const SizedBox(height: 16),
+      TextField(
+        controller: _secondaryManagerController,
+        textAlign: TextAlign.center,
+        decoration: const InputDecoration(
+          labelText: 'اسم المسؤول عن الجهاز',
+          hintText: 'يظهر صغيراً أسفل كل فاتورة',
+          border: OutlineInputBorder(),
+        ),
+      ),
+      const SizedBox(height: 12),
+      TextField(
+        controller: _secondaryKeyController,
+        textAlign: TextAlign.center,
+        textCapitalization: TextCapitalization.characters,
+        decoration: const InputDecoration(
+          labelText: 'المفتاح الثانوي',
+          hintText: 'ZAD-SEC-XXXX-XXXX-XXXX-XXXX',
+          border: OutlineInputBorder(),
+        ),
+      ),
+      if (_error != null) ...[
+        const SizedBox(height: 12),
+        Text(_error!, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
+      ],
+      const SizedBox(height: 16),
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _loading ? null : _activateSecondary,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1E88E5),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          child: _loading
+              ? const SizedBox(
+                  width: 22, height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
+              : const Text('تفعيل كجهاز ثانوي'),
         ),
       ),
     ]);

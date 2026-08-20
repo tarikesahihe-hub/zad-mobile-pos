@@ -11,6 +11,7 @@ enum LicenseState {
   trial,               // within the 7-day free trial, fully offline
   trialExpired,       // trial over, nothing activated yet
   lifetimeActive,      // permanently activated offline (HMAC key)
+  secondaryActive,     // secondary device activated offline (HMAC key)
   subscriptionActive,  // annual subscription, verified within grace period
   subscriptionGrace,   // subscription active but hasn't reached server in a while — still usable, warns user
   subscriptionLocked,  // subscription grace period exceeded — must connect to renew
@@ -36,8 +37,14 @@ class LicenseService {
   // or every previously-sold lifetime key stops validating.
   static const String _hmacSecret = 'ZAD-DZ-2026-8f3K9pQ2mN7vR4xL-LIFETIME-SECRET';
 
+  // ⚠️ Same rule as above but for secondary/dependent device keys — must
+  // match tools/generate_secondary_key.js exactly.
+  static const String _secondaryHmacSecret = 'ZAD-DZ-2026-SECONDARY-7hT4nQ1xP9mK-DEVICE-SECRET';
+
   static const _kInstallDate = 'zad_install_date';
   static const _kLifetimeActive = 'zad_lifetime_active';
+  static const _kSecondaryActive = 'zad_secondary_active';
+  static const _kManagerName = 'zad_manager_name';
   static const _kSubToken = 'zad_sub_token';
   static const _kSubExpiresAt = 'zad_sub_expires_at';
   static const _kSubLastVerified = 'zad_sub_last_verified';
@@ -70,6 +77,18 @@ class LicenseService {
     final fingerprint = await getDeviceFingerprint();
     final short = fingerprint.substring(0, 12).toUpperCase();
     return '${short.substring(0, 4)}-${short.substring(4, 8)}-${short.substring(8, 12)}';
+  }
+
+  // ---------------------------------------------------------------------
+  // Manager name (shown small at the bottom of every receipt)
+  // ---------------------------------------------------------------------
+
+  Future<String> getManagerName() async {
+    return await _storage.read(key: _kManagerName) ?? '';
+  }
+
+  Future<void> setManagerName(String name) async {
+    await _storage.write(key: _kManagerName, value: name.trim());
   }
 
   // ---------------------------------------------------------------------
@@ -183,8 +202,7 @@ class LicenseService {
     final remaining = trialDays - elapsed;
     return remaining < 0 ? 0 : remaining;
   }// ---------------------------------------------------------------------
-  // Lifetime activation (fully offline, HMAC-based — same pattern as
-  // Lumina POS Pro's hardware-fingerprint licensing)
+  // Lifetime activation (main device — fully offline, HMAC-based)
   // ---------------------------------------------------------------------
 
   String _expectedLifetimeSuffix(String deviceCode) {
@@ -203,7 +221,8 @@ class LicenseService {
 
   /// Validates and activates a lifetime key entirely offline. No network
   /// call — this is intentional, it's the whole point of this license type.
-  Future<String?> activateLifetime(String enteredKey) async {
+  /// [managerName] is stored and shown small at the bottom of every receipt.
+  Future<String?> activateLifetime(String enteredKey, {String? managerName}) async {
     try {
       final deviceCode = await getDeviceCode();
       final expectedSuffix = _expectedLifetimeSuffix(deviceCode);
@@ -213,6 +232,9 @@ class LicenseService {
 
       if (normalizedEntered == expectedKey) {
         await _storage.write(key: _kLifetimeActive, value: 'true');
+        if (managerName != null && managerName.trim().isNotEmpty) {
+          await setManagerName(managerName);
+        }
         return null;
       }
       return 'مفتاح الترخيص غير صحيح لهذا الجهاز. تأكد من إرسال رمز الجهاز الصحيح.';
@@ -223,6 +245,54 @@ class LicenseService {
 
   Future<bool> _isLifetimeActive() async {
     return await _storage.read(key: _kLifetimeActive) == 'true';
+  }
+
+  // ---------------------------------------------------------------------
+  // Secondary device activation (dependent devices — fully offline)
+  // ---------------------------------------------------------------------
+  //
+  // Same HMAC pattern as the main lifetime key, but with a different secret
+  // and prefix (ZAD-SEC-...) so secondary keys are generated with
+  // tools/generate_secondary_key.js and are distinct from the main key.
+  // NOTE: this only activates the app on the secondary device — it does not
+  // yet sync data with the main device (that is a separate, larger feature).
+
+  String _expectedSecondarySuffix(String deviceCode) {
+    final hmac = Hmac(sha256, utf8.encode(_secondaryHmacSecret));
+    final digest = hmac.convert(utf8.encode(deviceCode));
+    return digest.toString().substring(0, 16).toUpperCase();
+  }
+
+  String formatSecondaryKey(String suffix) {
+    final s = suffix.replaceAll('-', '').toUpperCase();
+    return 'ZAD-SEC-${s.substring(0, 4)}-${s.substring(4, 8)}-'
+        '${s.substring(8, 12)}-${s.substring(12, 16)}';
+  }
+
+  /// [managerName] is stored and shown small at the bottom of every receipt.
+  Future<String?> activateSecondary(String enteredKey, {String? managerName}) async {
+    try {
+      final deviceCode = await getDeviceCode();
+      final expectedSuffix = _expectedSecondarySuffix(deviceCode);
+      final expectedKey = formatSecondaryKey(expectedSuffix);
+
+      final normalizedEntered = enteredKey.trim().toUpperCase();
+
+      if (normalizedEntered == expectedKey) {
+        await _storage.write(key: _kSecondaryActive, value: 'true');
+        if (managerName != null && managerName.trim().isNotEmpty) {
+          await setManagerName(managerName);
+        }
+        return null;
+      }
+      return 'مفتاح الترخيص الثانوي غير صحيح لهذا الجهاز. تأكد من إرسال رمز الجهاز الصحيح.';
+    } catch (e) {
+      return 'خطأ أثناء التفعيل: $e';
+    }
+  }
+
+  Future<bool> _isSecondaryActive() async {
+    return await _storage.read(key: _kSecondaryActive) == 'true';
   }
 
   // ---------------------------------------------------------------------
@@ -312,6 +382,10 @@ class LicenseService {
       return LicenseState.lifetimeActive;
     }
 
+    if (await _isSecondaryActive()) {
+      return LicenseState.secondaryActive;
+    }
+
     if (await _hasSubscriptionToken()) {
       final expiresAtStr = await _storage.read(key: _kSubExpiresAt);
       final lastVerifiedStr = await _storage.read(key: _kSubLastVerified);
@@ -345,9 +419,10 @@ class LicenseService {
 
   Future<void> clearAll() async {
     await _storage.delete(key: _kLifetimeActive);
+    await _storage.delete(key: _kSecondaryActive);
     await _storage.delete(key: _kSubToken);
     await _storage.delete(key: _kSubExpiresAt);
     await _storage.delete(key: _kSubLastVerified);
-    // _kInstallDate intentionally kept — the trial clock should not reset.
+    // _kInstallDate and _kManagerName intentionally kept.
   }
 }
