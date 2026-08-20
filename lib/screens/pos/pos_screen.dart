@@ -86,7 +86,11 @@ class _PosScreenState extends State<PosScreen> {
   // Continuous barcode scanning
   // ---------------------------------------------------------------------
 
-  void _openContinuousScanner() {
+  /// Opens the continuous barcode scanner. The current cart (if any) is
+  /// never touched — scanned products are simply added to it via
+  /// [_handleScannedCode] / [_addToCart]. [onFinished] fires after the
+  /// scanner closes, e.g. to reopen the "edit cart" sheet.
+  void _openContinuousScanner({VoidCallback? onFinished}) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -97,6 +101,7 @@ class _PosScreenState extends State<PosScreen> {
     ).then((_) {
       // Refresh product list in case new products were added while scanning.
       if (mounted) context.read<InventoryProvider>().loadProducts();
+      onFinished?.call();
     });
   }
 
@@ -271,13 +276,38 @@ class _PosScreenState extends State<PosScreen> {
                         ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context); // إغلاق نافذة التعديل مؤقتاً
+                        _openContinuousScanner(
+                          onFinished: () {
+                            // بعد الانتهاء من المسح، نرجع لنفس نافذة تعديل السلة
+                            // (السلة لم تُفرَّغ ولم تُنشأ فاتورة جديدة).
+                            if (mounted) _showEditCartSheet(context.read<PosProvider>());
+                          },
+                        );
+                      },
+                      icon: const Icon(Icons.qr_code_scanner),
+                      label: Text('📷 ${AppStrings.get(context, 'pos_back_to_camera')}'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF1E88E5),
+                        side: const BorderSide(color: Color(0xFF1E88E5)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(context),
-                          child: Text(AppStrings.get(context, 'common_done')),
+                          child: Text(AppStrings.get(context, 'pos_save_edit')),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -515,7 +545,7 @@ class _PosScreenState extends State<PosScreen> {
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
             tooltip: AppStrings.get(context, 'pos_scan_tooltip'),
-            onPressed: _openContinuousScanner,
+            onPressed: () => _openContinuousScanner(),
           ),
         ],
       ),
