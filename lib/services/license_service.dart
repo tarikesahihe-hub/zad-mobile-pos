@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:permission_handler/permission_handler.dart';
 import '../config/api_config.dart';
 
 enum LicenseState {
@@ -72,15 +73,108 @@ class LicenseService {
   }
 
   // ---------------------------------------------------------------------
+  // Trial persistence marker (survives uninstall)
+  // ---------------------------------------------------------------------
+  //
+  // Android wipes an app's private storage on uninstall, so the trial start
+  // date stored in FlutterSecureStorage disappears with it — a user could
+  // simply reinstall the app to get a fresh 7-day trial. To raise the bar
+  // (not a hard guarantee, but non-trivial for a typical user) we also drop
+  // a small hidden marker file in shared/public storage, which is NOT tied
+  // to the app's private data and survives a normal uninstall/reinstall.
+  //
+  // A determined user could still find and delete the marker manually, or
+  // wipe the whole device. A real guarantee requires a hosted server that
+  // remembers the device fingerprint — intentionally out of scope for now.
+
+  Future<Directory?> _sharedMarkerDir() async {
+    try {
+      const basePath = '/storage/emulated/0/.zad_data';
+      final dir = Directory(basePath);
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      return dir;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<File?> _markerFile() async {
+    final dir = await _sharedMarkerDir();
+    if (dir == null) return null;
+    return File('${dir.path}/.trial_marker');
+  }
+
+  /// Best-effort request for the broad storage permission needed to read
+  /// and write the shared marker file. Safe to call repeatedly — does
+  /// nothing if already granted or already permanently denied.
+  Future<bool> _ensureStoragePermission() async {
+    try {
+      if (await Permission.manageExternalStorage.isGranted) return true;
+      final status = await Permission.manageExternalStorage.request();
+      return status.isGranted;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _writeTrialMarker(String deviceCode, DateTime installDate) async {
+    try {
+      final granted = await _ensureStoragePermission();
+      if (!granted) return;
+      final file = await _markerFile();
+      if (file == null) return;
+      final payload = jsonEncode({
+        'device_code': deviceCode,
+        'install_date': installDate.toIso8601String(),
+      });
+      await file.writeAsString(payload, flush: true);
+    } catch (_) {
+      // Non-fatal — the app still works with the in-app trial date alone.
+    }
+  }
+
+  Future<DateTime?> _readTrialMarker(String deviceCode) async {
+    try {
+      final granted = await _ensureStoragePermission();
+      if (!granted) return null;
+      final file = await _markerFile();
+      if (file == null || !await file.exists()) return null;
+      final content = await file.readAsString();
+      final data = jsonDecode(content) as Map<String, dynamic>;
+      if (data['device_code'] != deviceCode) return null;
+      final dateStr = data['install_date'] as String?;
+      if (dateStr == null) return null;
+      return DateTime.tryParse(dateStr);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ---------------------------------------------------------------------
   // Trial
   // ---------------------------------------------------------------------
 
   Future<DateTime> _ensureInstallDate() async {
     final stored = await _storage.read(key: _kInstallDate);
     if (stored != null) return DateTime.parse(stored);
-    final now = DateTime.now();
-    await _storage.write(key: _kInstallDate, value: now.toIso8601String());
-    return now;
+
+    // Fresh app-private storage (first-ever install OR a reinstall after
+    // uninstall). Check the shared marker first — if it exists for this
+    // exact device, this is a reinstall and we must resume the original
+    // clock instead of starting a brand-new 7-day trial.
+    final deviceCode = await getDeviceCode();
+    final markerDate = await _readTrialMarker(deviceCode);
+
+    final installDate = markerDate ?? DateTime.now();
+    await _storage.write(key: _kInstallDate, value: installDate.toIso8601String());
+
+    // (Re)write the marker so it stays in sync — harmless if it already
+    // existed with the same date, and creates it on first-ever install.
+    await _writeTrialMarker(deviceCode, installDate);
+
+    return installDate;
   }
 
   Future<int> trialDaysRemaining() async {
@@ -88,9 +182,7 @@ class LicenseService {
     final elapsed = DateTime.now().difference(installDate).inDays;
     final remaining = trialDays - elapsed;
     return remaining < 0 ? 0 : remaining;
-  }
-
-  // ---------------------------------------------------------------------
+  }// ---------------------------------------------------------------------
   // Lifetime activation (fully offline, HMAC-based — same pattern as
   // Lumina POS Pro's hardware-fingerprint licensing)
   // ---------------------------------------------------------------------
