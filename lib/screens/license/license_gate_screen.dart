@@ -8,6 +8,7 @@ import 'license_locked_screen.dart';
 ///   • trial (<=15 days since install)      -> straight into the app
 ///   • trialExpired / subscriptionExpired    -> activation screen
 ///   • lifetimeActive                        -> straight in, forever, no network ever
+///   • secondaryActive                       -> straight in, forever, no network ever
 ///   • subscriptionActive / subscriptionGrace-> straight in, silent background re-check
 ///   • subscriptionLocked                    -> locked screen asking to reconnect
 class LicenseGateScreen extends StatefulWidget {
@@ -31,6 +32,7 @@ class _LicenseGateScreenState extends State<LicenseGateScreen> {
     switch (state) {
       case LicenseState.trial:
       case LicenseState.lifetimeActive:
+      case LicenseState.secondaryActive:
       case LicenseState.subscriptionActive:
       case LicenseState.subscriptionGrace:
         Navigator.of(context).pushReplacement(
