@@ -87,6 +87,144 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Widget _buildCurrencySection() {
+    return Consumer<AppProvider>(
+      builder: (context, appProvider, _) {
+        return Card(
+          margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.attach_money, color: Color(0xFF1E88E5)),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppStrings.get(context, 'set_currency_title'),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  AppStrings.get(context, 'set_currency_subtitle'),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '${AppProvider.currencySymbolFor(appProvider.currencyCode)} — ${AppProvider.currencyNameFor(appProvider.currencyCode)}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showCurrencyPickerDialog(context, appProvider),
+                    icon: const Icon(Icons.currency_exchange),
+                    label: Text(AppStrings.get(context, 'set_currency_title')),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCurrencyPickerDialog(BuildContext context, AppProvider appProvider) {
+    final searchController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final query = searchController.text.trim();
+          final entries = AppProvider.currencyNames.entries.where((entry) {
+            if (query.isEmpty) return true;
+            final code = entry.key.toLowerCase();
+            final name = entry.value;
+            final symbol = AppProvider.currencySymbolFor(entry.key);
+            return code.contains(query.toLowerCase()) ||
+                name.contains(query) ||
+                symbol.contains(query);
+          }).toList();
+
+          return AlertDialog(
+            title: Text(AppStrings.get(context, 'set_currency_title')),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: searchController,
+                    textAlign: TextAlign.right,
+                    decoration: InputDecoration(
+                      hintText: AppStrings.get(context, 'set_currency_search_hint'),
+                      prefixIcon: const Icon(Icons.search),
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setDialogState(() {}),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 350,
+                    child: ListView.builder(
+                      itemCount: entries.length,
+                      itemBuilder: (context, index) {
+                        final code = entries[index].key;
+                        final name = entries[index].value;
+                        final symbol = AppProvider.currencySymbolFor(code);
+                        final selected = code == appProvider.currencyCode;
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: selected
+                                ? const Color(0xFF1E88E5)
+                                : Colors.grey.shade200,
+                            child: Text(
+                              symbol,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: selected ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                          ),
+                          title: Text(name),
+                          subtitle: Text(code),
+                          trailing: selected ? const Icon(Icons.check, color: Color(0xFF1E88E5)) : null,
+                          onTap: () async {
+                            await appProvider.setCurrency(code);
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(AppStrings.get(context, 'set_currency_save_success'))),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(AppStrings.get(context, 'common_cancel')),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildBusinessInfoSection() {
     return Consumer<AppProvider>(
       builder: (context, appProvider, _) {
@@ -481,6 +619,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildLicenseSection(),
           _buildAccountSection(),
           _buildBusinessInfoSection(),
+          _buildCurrencySection(),
           _buildLanguageSection(),
           _buildBackupHeader(),
           Padding(

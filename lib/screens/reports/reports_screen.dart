@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/report_provider.dart';
+import '../../providers/app_provider.dart';
 import '../../l10n/app_strings.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -22,7 +23,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currency = AppStrings.get(context, 'common_currency');
+    final currency = context.watch<AppProvider>().currencySymbol;
     final days = AppStrings.get(context, 'rep_days').split('|');
 
     return Scaffold(
@@ -235,7 +236,7 @@ class _ProductRankItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currency = AppStrings.get(context, 'common_currency');
+    final currency = context.watch<AppProvider>().currencySymbol;
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: rank <= 3 ? const Color(0xFFFF9800).withOpacity(0.2) : Colors.grey.withOpacity(0.2),

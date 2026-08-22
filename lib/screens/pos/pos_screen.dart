@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 import '../../providers/pos_provider.dart';
 import '../../providers/inventory_provider.dart';
 import '../../providers/customer_provider.dart';
+import '../../providers/app_provider.dart';
 import '../../models/product.dart';
 import '../../models/customer.dart';
 import '../../l10n/app_strings.dart';
@@ -38,7 +39,7 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Future<void> _confirmClearCart(PosProvider pos) async {
-    final currency = AppStrings.get(context, 'common_currency');
+    final currency = context.read<AppProvider>().currencySymbol;
     final body = AppStrings
         .get(context, 'pos_clear_cart_body')
         .replaceAll('{count}', '${pos.cartItems.length}')
@@ -225,6 +226,7 @@ class _PosScreenState extends State<PosScreen> {
         expand: false,
         builder: (context, scrollController) => Consumer<PosProvider>(
           builder: (context, cartPos, _) {
+            final currency = context.watch<AppProvider>().currencySymbol;
             return Column(
               children: [
                 Padding(
@@ -245,7 +247,7 @@ class _PosScreenState extends State<PosScreen> {
                             return ListTile(
                               title: Text(item.product.name),
                               subtitle: Text(
-                                '${item.unitPrice.toStringAsFixed(2)} ${AppStrings.get(context, 'common_currency')} × ${item.quantity}',
+                                '${item.unitPrice.toStringAsFixed(2)} $currency × ${item.quantity}',
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -340,7 +342,7 @@ class _PosScreenState extends State<PosScreen> {
 
   void _showCheckoutDialog() {
     final pos = context.read<PosProvider>();
-    final currency = AppStrings.get(context, 'common_currency');
+    final currency = context.read<AppProvider>().currencySymbol;
     String localPaymentMethod = pos.paymentMethod == 'CASH' || pos.paymentMethod.isEmpty
         ? 'cash'
         : pos.paymentMethod.toLowerCase();
@@ -603,6 +605,7 @@ class _PosScreenState extends State<PosScreen> {
         Expanded(
           child: Consumer<InventoryProvider>(
             builder: (context, inventory, child) {
+              final currency = context.watch<AppProvider>().currencySymbol;
               if (inventory.isLoading) {
                 return const Center(child: CircularProgressIndicator());
               }
@@ -624,7 +627,7 @@ class _PosScreenState extends State<PosScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          Text('${product.price} ${AppStrings.get(context, 'common_currency')}'),
+                          Text('${product.price} $currency'),
                         ],
                       ),
                     ),
@@ -641,7 +644,7 @@ class _PosScreenState extends State<PosScreen> {
   Widget _buildCartPanel() {
     return Consumer<PosProvider>(
       builder: (context, pos, child) {
-        final currency = AppStrings.get(context, 'common_currency');
+        final currency = context.watch<AppProvider>().currencySymbol;
         return Column(
           children: [
             Expanded(

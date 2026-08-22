@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/customer_provider.dart';
+import '../../providers/app_provider.dart';
 import '../../models/customer.dart';
 import '../../l10n/app_strings.dart';
 
@@ -106,7 +107,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
 void _showPayDebtDialog(BuildContext context, Customer customer) {
   final amountController = TextEditingController();
-  final currency = AppStrings.get(context, 'common_currency');
+  final currency = context.read<AppProvider>().currencySymbol;
   final debtText = AppStrings
       .get(context, 'cust_current_debt')
       .replaceAll('{amount}', customer.balance.toStringAsFixed(2))
@@ -164,7 +165,7 @@ class _CustomerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currency = AppStrings.get(context, 'common_currency');
+    final currency = context.watch<AppProvider>().currencySymbol;
     final loyaltyText = AppStrings
         .get(context, 'cust_loyalty_points')
         .replaceAll('{points}', '${customer.loyaltyPoints}');

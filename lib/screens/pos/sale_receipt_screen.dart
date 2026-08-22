@@ -18,6 +18,7 @@ class SaleReceiptScreen extends StatelessWidget {
     final appProvider = context.watch<AppProvider>();
     final businessName = appProvider.businessName.isEmpty ? 'ZAD Store' : appProvider.businessName;
     final businessType = appProvider.businessType;
+    final currency = appProvider.currencySymbol;
 
     return Scaffold(
       appBar: AppBar(
@@ -44,7 +45,7 @@ class SaleReceiptScreen extends StatelessWidget {
             icon: const Icon(Icons.share),
             onPressed: () async {
               final managerName = await LicenseService().getManagerName();
-              await _shareReceipt(businessName, businessType, managerName);
+              await _shareReceipt(businessName, businessType, managerName, currency);
             },
           ),
         ],
@@ -98,20 +99,20 @@ class SaleReceiptScreen extends StatelessWidget {
                         children: [
                           Expanded(flex: 3, child: Text(item.productName)),
                           Expanded(flex: 1, child: Text('${item.quantity}', textAlign: TextAlign.center)),
-                          Expanded(flex: 2, child: Text('${item.total.toStringAsFixed(2)} د.ج', textAlign: TextAlign.end)),
+                          Expanded(flex: 2, child: Text('${item.total.toStringAsFixed(2)} $currency', textAlign: TextAlign.end)),
                         ],
                       ),
                     )),
                     const Divider(),
 
                     // Totals
-                    _buildTotalRow('المجموع:', sale.subtotal),
+                    _buildTotalRow('المجموع:', sale.subtotal, currency),
                     if (sale.discount > 0)
-                      _buildTotalRow('الخصم:', sale.discount, isDiscount: true),
+                      _buildTotalRow('الخصم:', sale.discount, currency, isDiscount: true),
                     if (sale.tax > 0)
-                      _buildTotalRow('الضريبة:', sale.tax),
+                      _buildTotalRow('الضريبة:', sale.tax, currency),
                     const Divider(),
-                    _buildTotalRow('الإجمالي:', sale.total, isBold: true),
+                    _buildTotalRow('الإجمالي:', sale.total, currency, isBold: true),
                     const SizedBox(height: 10),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -120,7 +121,7 @@ class SaleReceiptScreen extends StatelessWidget {
                         children: [
                           const Text('المبلغ المدفوع:', style: TextStyle(fontSize: 13, color: Colors.black87)),
                           Text(
-                            '${sale.amountPaid.toStringAsFixed(2)} د.ج',
+                            '${sale.amountPaid.toStringAsFixed(2)} $currency',
                             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF43A047)),
                           ),
                         ],
@@ -138,8 +139,8 @@ class SaleReceiptScreen extends StatelessWidget {
                           ),
                           Text(
                             sale.paymentMethod == 'credit'
-                                ? '${(sale.total - sale.amountPaid).toStringAsFixed(2)} د.ج'
-                                : '${sale.changeDue.toStringAsFixed(2)} د.ج',
+                                ? '${(sale.total - sale.amountPaid).toStringAsFixed(2)} $currency'
+                                : '${sale.changeDue.toStringAsFixed(2)} $currency',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -239,7 +240,7 @@ class SaleReceiptScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTotalRow(String label, double value, {bool isBold = false, bool isDiscount = false}) {
+  Widget _buildTotalRow(String label, double value, String currency, {bool isBold = false, bool isDiscount = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -247,7 +248,7 @@ class SaleReceiptScreen extends StatelessWidget {
         children: [
           Text(label, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.normal, fontSize: isBold ? 18 : 14)),
           Text(
-            '${value.toStringAsFixed(2)} د.ج',
+            '${value.toStringAsFixed(2)} $currency',
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
               fontSize: isBold ? 20 : 14,
@@ -259,7 +260,7 @@ class SaleReceiptScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAmountBadge(String label, double value, Color color) {
+  Widget _buildAmountBadge(String label, double value, Color color, String currency) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Container(
@@ -280,7 +281,7 @@ class SaleReceiptScreen extends StatelessWidget {
               value.toStringAsFixed(2),
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color),
             ),
-            Text('د.ج', style: TextStyle(fontSize: 9, color: color)),
+            Text(currency, style: TextStyle(fontSize: 9, color: color)),
           ],
         ),
       ),
@@ -321,7 +322,7 @@ class SaleReceiptScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _shareReceipt(String businessName, String businessType, String managerName) async {
+  Future<void> _shareReceipt(String businessName, String businessType, String managerName, String currency) async {
     final buffer = StringBuffer();
     buffer.writeln('$businessName${businessType.isEmpty ? '' : ' - $businessType'}');
     buffer.writeln('فاتورة مبيعات');
@@ -330,17 +331,17 @@ class SaleReceiptScreen extends StatelessWidget {
     if (sale.customerName != null) buffer.writeln('العميل: ${sale.customerName}');
     buffer.writeln('-------------------------');
     for (final item in sale.items) {
-      buffer.writeln('${item.productName}  x${item.quantity}  ${item.total.toStringAsFixed(2)} د.ج');
+      buffer.writeln('${item.productName}  x${item.quantity}  ${item.total.toStringAsFixed(2)} $currency');
     }
     buffer.writeln('-------------------------');
-    buffer.writeln('المجموع: ${sale.subtotal.toStringAsFixed(2)} د.ج');
-    if (sale.discount > 0) buffer.writeln('الخصم: ${sale.discount.toStringAsFixed(2)} د.ج');
-    if (sale.tax > 0) buffer.writeln('الضريبة: ${sale.tax.toStringAsFixed(2)} د.ج');
-    buffer.writeln('الإجمالي: ${sale.total.toStringAsFixed(2)} د.ج');
-    buffer.writeln('المبلغ المدفوع: ${sale.amountPaid.toStringAsFixed(2)} د.ج');
-    if (sale.changeDue > 0) buffer.writeln('الباقي للزبون: ${sale.changeDue.toStringAsFixed(2)} د.ج');
+    buffer.writeln('المجموع: ${sale.subtotal.toStringAsFixed(2)} $currency');
+    if (sale.discount > 0) buffer.writeln('الخصم: ${sale.discount.toStringAsFixed(2)} $currency');
+    if (sale.tax > 0) buffer.writeln('الضريبة: ${sale.tax.toStringAsFixed(2)} $currency');
+    buffer.writeln('الإجمالي: ${sale.total.toStringAsFixed(2)} $currency');
+    buffer.writeln('المبلغ المدفوع: ${sale.amountPaid.toStringAsFixed(2)} $currency');
+    if (sale.changeDue > 0) buffer.writeln('الباقي للزبون: ${sale.changeDue.toStringAsFixed(2)} $currency');
     if (sale.paymentMethod == 'credit' && (sale.total - sale.amountPaid) > 0) {
-      buffer.writeln('المتبقي كدين: ${(sale.total - sale.amountPaid).toStringAsFixed(2)} د.ج');
+      buffer.writeln('المتبقي كدين: ${(sale.total - sale.amountPaid).toStringAsFixed(2)} $currency');
     }
     buffer.writeln('طريقة الدفع: ${_getPaymentMethodName(sale.paymentMethod)}');
     if (managerName.isNotEmpty) buffer.writeln('المسؤول: $managerName');

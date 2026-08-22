@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/inventory_provider.dart';
+import '../../providers/app_provider.dart';
 import '../../models/product.dart';
 import '../../l10n/app_strings.dart';
 import 'product_form_screen.dart';
@@ -174,7 +175,7 @@ class _ProductListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLowStock = product.quantity <= product.minStock && product.minStock > 0;
-    final currency = AppStrings.get(context, 'common_currency');
+    final currency = context.watch<AppProvider>().currencySymbol;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

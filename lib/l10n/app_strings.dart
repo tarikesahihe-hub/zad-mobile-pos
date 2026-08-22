@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 class AppStrings {
@@ -132,6 +131,10 @@ class AppStrings {
       'set_business_name_label': 'اسم المحل',
       'set_business_name_hint': 'مثال: مطعم النخبة',
       'set_business_save_success': 'تم حفظ معلومات النشاط بنجاح',
+      'set_currency_title': 'العملة',
+      'set_currency_subtitle': 'العملة المستعملة فـ كل الأسعار والفواتير',
+      'set_currency_search_hint': 'ابحث عن عملة...',
+      'set_currency_save_success': 'تم تغيير العملة بنجاح',
     },
     'fr': {
       'nav_home': 'Accueil',
@@ -262,6 +265,10 @@ class AppStrings {
       'set_business_name_label': 'Nom du commerce',
       'set_business_name_hint': 'Ex: Restaurant Elite',
       'set_business_save_success': 'Informations du commerce enregistrées',
+      'set_currency_title': 'Devise',
+      'set_currency_subtitle': 'Devise utilisée pour tous les prix et factures',
+      'set_currency_search_hint': 'Rechercher une devise...',
+      'set_currency_save_success': 'Devise changée avec succès',
     },
     'en': {
       'nav_home': 'Home',
@@ -392,6 +399,10 @@ class AppStrings {
       'set_business_name_label': 'Business name',
       'set_business_name_hint': 'e.g. Elite Restaurant',
       'set_business_save_success': 'Business info saved successfully',
+      'set_currency_title': 'Currency',
+      'set_currency_subtitle': 'Currency used across all prices and invoices',
+      'set_currency_search_hint': 'Search for a currency...',
+      'set_currency_save_success': 'Currency changed successfully',
     },
   };
 
