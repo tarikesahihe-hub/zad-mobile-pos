@@ -1,6 +1,7 @@
 import 'dart:io'; // حل مشكلة FileSystemEntity و statSync
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/backup_service.dart';
 import '../../providers/app_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -8,6 +9,7 @@ import '../../services/license_service.dart';
 import '../../l10n/app_strings.dart';
 import '../license/license_gate_screen.dart';
 import '../license/license_activation_screen.dart';
+import 'secondary_devices_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -19,11 +21,18 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   List<FileSystemEntity> _backups = [];
   bool _creatingBackup = false;
+  LicenseState? _licenseState;
 
   @override
   void initState() {
     super.initState();
     _loadBackups();
+    _loadLicenseState();
+  }
+
+  Future<void> _loadLicenseState() async {
+    final state = await LicenseService().getState();
+    if (mounted) setState(() => _licenseState = state);
   }
 
   Future<void> _loadBackups() async {
@@ -85,6 +94,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SnackBar(content: Text(AppStrings.get(context, 'set_restore_success'))),
       );
     }
+  }
+
+  Widget _buildSecondaryDevicesSection() {
+    if (_licenseState != LicenseState.lifetimeActive) return const SizedBox.shrink();
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: ListTile(
+        leading: const Icon(Icons.devices_other, color: Color(0xFF1E88E5)),
+        title: Text(AppStrings.get(context, 'set_secondary_title')),
+        subtitle: Text(AppStrings.get(context, 'set_secondary_subtitle')),
+        trailing: const Icon(Icons.chevron_left),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const SecondaryDevicesScreen()),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _openSupportLink() async {
+    final uri = Uri.parse('https://www.facebook.com/share/1GGpru9TYh/');
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح الرابط')),
+        );
+      }
+    }
+  }
+
+  Widget _buildSupportSection() {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: ListTile(
+        leading: const Icon(Icons.support_agent, color: Color(0xFF1E88E5)),
+        title: Text(AppStrings.get(context, 'set_support_title')),
+        subtitle: Text(AppStrings.get(context, 'set_support_subtitle')),
+        trailing: const Icon(Icons.open_in_new),
+        onTap: _openSupportLink,
+      ),
+    );
   }
 
   Widget _buildCurrencySection() {
@@ -617,11 +670,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         children: [
           _buildLicenseSection(),
+          _buildSecondaryDevicesSection(),
           _buildAccountSection(),
           _buildBusinessInfoSection(),
           _buildCurrencySection(),
           _buildLanguageSection(),
           _buildBackupHeader(),
+          _buildSupportSection(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Align(

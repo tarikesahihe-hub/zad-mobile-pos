@@ -18,6 +18,30 @@ enum LicenseState {
   subscriptionExpired, // subscription end date passed
 }
 
+class SecondaryDeviceRecord {
+  final String deviceCode;
+  final String label;
+  final DateTime registeredAt;
+
+  SecondaryDeviceRecord({
+    required this.deviceCode,
+    required this.label,
+    required this.registeredAt,
+  });
+
+  factory SecondaryDeviceRecord.fromMap(Map<String, dynamic> map) => SecondaryDeviceRecord(
+        deviceCode: map['device_code'] as String,
+        label: map['label'] as String? ?? '',
+        registeredAt: DateTime.tryParse(map['registered_at'] as String? ?? '') ?? DateTime.now(),
+      );
+
+  Map<String, dynamic> toMap() => {
+        'device_code': deviceCode,
+        'label': label,
+        'registered_at': registeredAt.toIso8601String(),
+      };
+}
+
 class LicenseService {
   static final LicenseService _instance = LicenseService._internal();
   factory LicenseService() => _instance;
@@ -30,6 +54,12 @@ class LicenseService {
   // locks pending re-connection (this is what makes the annual plan
   // "بالنت" as opposed to the lifetime key which never needs it again).
   static const int subscriptionGraceDays = 14;
+
+  // Maximum number of secondary devices a lifetime license can ever issue.
+  // This is a permanent budget — deleting a device from the local roster
+  // (for organizational purposes) does NOT free up a seat. This is
+  // intentional and matches how the business wants licenses to work.
+  static const int maxSecondaryDevices = 4;
 
   // ⚠️ IMPORTANT: this secret must be IDENTICAL to the one used in the
   // offline key-generator script (tools/generate_lifetime_key.js) that
@@ -45,6 +75,8 @@ class LicenseService {
   static const _kLifetimeActive = 'zad_lifetime_active';
   static const _kSecondaryActive = 'zad_secondary_active';
   static const _kManagerName = 'zad_manager_name';
+  static const _kSecondaryDevicesUsed = 'zad_secondary_devices_used';
+  static const _kSecondaryDevicesRoster = 'zad_secondary_devices_roster';
   static const _kSubToken = 'zad_sub_token';
   static const _kSubExpiresAt = 'zad_sub_expires_at';
   static const _kSubLastVerified = 'zad_sub_last_verified';
@@ -89,6 +121,88 @@ class LicenseService {
 
   Future<void> setManagerName(String name) async {
     await _storage.write(key: _kManagerName, value: name.trim());
+  }
+
+  // ---------------------------------------------------------------------
+  // Secondary device roster (main/lifetime device only)
+  // ---------------------------------------------------------------------
+  //
+  // Fully offline bookkeeping. The main device keeps a local list of every
+  // secondary device it has ever issued a key for, plus a permanent
+  // consumption counter capped at [maxSecondaryDevices]. Removing an entry
+  // from the roster is for organization only — it does NOT free up a seat,
+  // by explicit design.
+
+  Future<int> secondaryDevicesUsed() async {
+    final raw = await _storage.read(key: _kSecondaryDevicesUsed);
+    return int.tryParse(raw ?? '0') ?? 0;
+  }
+
+  int get secondaryDevicesRemaining => maxSecondaryDevices;
+
+  Future<int> secondaryDevicesRemainingCount() async {
+    final used = await secondaryDevicesUsed();
+    final remaining = maxSecondaryDevices - used;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  Future<List<SecondaryDeviceRecord>> getSecondaryDeviceRoster() async {
+    final raw = await _storage.read(key: _kSecondaryDevicesRoster);
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list
+          .map((e) => SecondaryDeviceRecord.fromMap(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> _saveSecondaryDeviceRoster(List<SecondaryDeviceRecord> roster) async {
+    final raw = jsonEncode(roster.map((r) => r.toMap()).toList());
+    await _storage.write(key: _kSecondaryDevicesRoster, value: raw);
+  }
+
+  /// Registers a secondary device's code against the main license and
+  /// permanently consumes one seat out of [maxSecondaryDevices]. Returns
+  /// the generated ZAD-SEC key to hand to the customer, or an error string
+  /// if no seats remain or the device code is already registered.
+  Future<String> registerSecondaryDevice({
+    required String deviceCode,
+    required String label,
+  }) async {
+    final normalizedCode = deviceCode.trim().toUpperCase();
+    final roster = await getSecondaryDeviceRoster();
+
+    final alreadyRegistered = roster.any((r) => r.deviceCode == normalizedCode);
+    if (alreadyRegistered) {
+      throw Exception('هذا الجهاز مسجل بالفعل');
+    }
+
+    final used = await secondaryDevicesUsed();
+    if (used >= maxSecondaryDevices) {
+      throw Exception('تم استنفاد كل الرخص الثانوية ($maxSecondaryDevices/$maxSecondaryDevices)');
+    }
+
+    roster.add(SecondaryDeviceRecord(
+      deviceCode: normalizedCode,
+      label: label.trim().isEmpty ? 'جهاز ${used + 1}' : label.trim(),
+      registeredAt: DateTime.now(),
+    ));
+    await _saveSecondaryDeviceRoster(roster);
+    await _storage.write(key: _kSecondaryDevicesUsed, value: '${used + 1}');
+
+    final expectedSuffix = _expectedSecondarySuffix(normalizedCode);
+    return formatSecondaryKey(expectedSuffix);
+  }
+
+  /// Removes a device from the visible roster for organizational purposes
+  /// only. Does NOT free up a consumed seat.
+  Future<void> removeSecondaryDeviceFromRoster(String deviceCode) async {
+    final roster = await getSecondaryDeviceRoster();
+    roster.removeWhere((r) => r.deviceCode == deviceCode.trim().toUpperCase());
+    await _saveSecondaryDeviceRoster(roster);
   }
 
   // ---------------------------------------------------------------------
@@ -253,9 +367,10 @@ class LicenseService {
   //
   // Same HMAC pattern as the main lifetime key, but with a different secret
   // and prefix (ZAD-SEC-...) so secondary keys are generated with
-  // tools/generate_secondary_key.js and are distinct from the main key.
-  // NOTE: this only activates the app on the secondary device — it does not
-  // yet sync data with the main device (that is a separate, larger feature).
+  // tools/generate_secondary_key.js or via registerSecondaryDevice() on the
+  // main device, and are distinct from the main key. NOTE: this only
+  // activates the app on the secondary device — it does not yet sync data
+  // with the main device (that is a separate, larger feature).
 
   String _expectedSecondarySuffix(String deviceCode) {
     final hmac = Hmac(sha256, utf8.encode(_secondaryHmacSecret));
@@ -423,6 +538,8 @@ class LicenseService {
     await _storage.delete(key: _kSubToken);
     await _storage.delete(key: _kSubExpiresAt);
     await _storage.delete(key: _kSubLastVerified);
-    // _kInstallDate and _kManagerName intentionally kept.
+    // _kInstallDate, _kManagerName, secondary device roster/counter
+    // intentionally kept — clearing this license must not reset the
+    // permanent secondary-seat budget.
   }
 }
