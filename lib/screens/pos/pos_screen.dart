@@ -244,6 +244,7 @@ class _PosScreenState extends State<PosScreen> {
                           itemCount: cartPos.cartItems.length,
                           itemBuilder: (context, index) {
                             final item = cartPos.cartItems[index];
+                            final itemId = item.product.id;
                             return ListTile(
                               title: Text(item.product.name),
                               subtitle: Text(
@@ -254,22 +255,28 @@ class _PosScreenState extends State<PosScreen> {
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.remove_circle_outline),
-                                    onPressed: () {
-                                      if (item.quantity > 1) {
-                                        cartPos.updateQuantity(item.product.id!, item.quantity - 1);
-                                      } else {
-                                        cartPos.removeFromCart(item.product.id!);
-                                      }
-                                    },
+                                    onPressed: itemId == null
+                                        ? null
+                                        : () {
+                                            if (item.quantity > 1) {
+                                              cartPos.updateQuantity(itemId, item.quantity - 1);
+                                            } else {
+                                              cartPos.removeFromCart(itemId);
+                                            }
+                                          },
                                   ),
                                   Text('${item.quantity}'),
                                   IconButton(
                                     icon: const Icon(Icons.add_circle_outline),
-                                    onPressed: () => cartPos.updateQuantity(item.product.id!, item.quantity + 1),
+                                    onPressed: itemId == null
+                                        ? null
+                                        : () => cartPos.updateQuantity(itemId, item.quantity + 1),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                    onPressed: () => cartPos.removeFromCart(item.product.id!),
+                                    onPressed: itemId == null
+                                        ? null
+                                        : () => cartPos.removeFromCart(itemId),
                                   ),
                                 ],
                               ),
@@ -282,8 +289,13 @@ class _PosScreenState extends State<PosScreen> {
                   child: SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () {
+                      onPressed: () async {
                         Navigator.pop(context); // إغلاق نافذة التعديل مؤقتاً
+                        // ننتظرو إغلاق النافذة (والـ animation ديالها) يكمل
+                        // تماماً قبل ما نفتحو الكاميرا، باش نتفادى تسابق
+                        // موارد (controller) بين النافذتين.
+                        await Future.delayed(const Duration(milliseconds: 300));
+                        if (!mounted) return;
                         _openContinuousScanner(
                           onFinished: () {
                             // بعد الانتهاء من المسح، نرجع لنفس نافذة تعديل السلة
@@ -654,6 +666,7 @@ class _PosScreenState extends State<PosScreen> {
                       itemCount: pos.cartItems.length,
                       itemBuilder: (context, index) {
                         final item = pos.cartItems[index];
+                        final itemId = item.product.id;
                         return ListTile(
                           dense: true,
                           title: Text(item.product.name, overflow: TextOverflow.ellipsis),
@@ -663,17 +676,15 @@ class _PosScreenState extends State<PosScreen> {
                             children: [
                               IconButton(
                                 icon: const Icon(Icons.remove, size: 20),
-                                onPressed: () => pos.updateQuantity(
-                                  item.product.id!,
-                                  item.quantity - 1,
-                                ),
+                                onPressed: itemId == null
+                                    ? null
+                                    : () => pos.updateQuantity(itemId, item.quantity - 1),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.add, size: 20),
-                                onPressed: () => pos.updateQuantity(
-                                  item.product.id!,
-                                  item.quantity + 1,
-                                ),
+                                onPressed: itemId == null
+                                    ? null
+                                    : () => pos.updateQuantity(itemId, item.quantity + 1),
                               ),
                             ],
                           ),
