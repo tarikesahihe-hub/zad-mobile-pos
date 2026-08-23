@@ -39,7 +39,7 @@ class AppProvider extends ChangeNotifier {
     'SOS': 'ش.ص',
     'DJF': 'ف.ج',
     'KMF': 'ف.ق',
-    'PSN': 'ش.ف',
+    'PSN': 'د.أ',
   };
 
   static const Map<String, String> currencyNames = {
@@ -66,7 +66,7 @@ class AppProvider extends ChangeNotifier {
     'SOS': 'شلن صومالي',
     'DJF': 'فرنك جيبوتي',
     'KMF': 'فرنك قمري',
-    'PSN': 'شيكل فلسطيني',
+    'PSN': 'دينار أردني (فلسطين)',
   };
 
   static String currencySymbolFor(String code) {
