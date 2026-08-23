@@ -22,17 +22,17 @@ void main() {
 
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
-      debugPrint('FLUTTER ERROR: \${details.exceptionAsString()}');
+      debugPrint('FLUTTER ERROR: ${details.exceptionAsString()}');
     };
 
     PlatformDispatcher.instance.onError = (error, stack) {
-      debugPrint('PLATFORM ERROR: \$error');
+      debugPrint('PLATFORM ERROR: $error');
       return true;
     };
 
     runApp(const ZadMobileApp());
   }, (error, stack) {
-    debugPrint('ZONE ERROR: \$error');
+    debugPrint('ZONE ERROR: $error');
     runApp(MaterialApp(
       home: Scaffold(
         backgroundColor: Colors.red.shade900,
@@ -45,7 +45,7 @@ void main() {
                 const Icon(Icons.error, color: Colors.white, size: 60),
                 const SizedBox(height: 20),
                 Text(
-                  'خطأ غير متوقع:\n\$error',
+                  'خطأ غير متوقع:\n$error',
                   style: const TextStyle(color: Colors.white, fontSize: 16),
                   textAlign: TextAlign.center,
                 ),
