@@ -300,7 +300,14 @@ class _PosScreenState extends State<PosScreen> {
                           onFinished: () {
                             // بعد الانتهاء من المسح، نرجع لنفس نافذة تعديل السلة
                             // (السلة لم تُفرَّغ ولم تُنشأ فاتورة جديدة).
-                            if (mounted) _showEditCartSheet(context.read<PosProvider>());
+                            if (!mounted) return;
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) {
+                                _showEditCartSheet(
+                                  Provider.of<PosProvider>(context, listen: false),
+                                );
+                              }
+                            });
                           },
                         );
                       },
