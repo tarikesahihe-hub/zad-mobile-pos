@@ -23,3 +23,4 @@ key.properties
 
 # OS
 .DS_Store
+pubspec.lock
