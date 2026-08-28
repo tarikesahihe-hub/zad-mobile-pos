@@ -33,17 +33,6 @@ class DatabaseService {
     );
   }
 
-    final directory = await getApplicationDocumentsDirectory();
-    final path = join(directory.path, 'zad_pos.db');
-
-    return await openDatabase(
-      path,
-      version: 4,
-      onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
-    );
-  }
-
   Future<void> _onCreate(Database db, int version) async {
     // Products table
     await db.execute('''
