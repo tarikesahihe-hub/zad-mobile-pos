@@ -1,7 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:sqflite/sqflite.dart';
-import 'package:sqflite_common_ffi/sqflite_common_ffi.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/product.dart';
@@ -15,20 +13,7 @@ class DatabaseService {
   factory DatabaseService() => _instance;
   DatabaseService._internal();
 
-static Database? _database;
-  static bool _ffiInitialized = false;
-
-  /// على Windows/Linux/macOS، محرك sqflite الأصلي ماخدامش — لازم نستعملو
-  /// sqflite_common_ffi بدلو. هاذي الدالة كتفعّل الإعداد المناسب مرة وحدة
-  /// فقط، وكيبقى كل باقي الكود (استعلامات، جداول...) يخدم بلا تغيير.
-  void _ensureFfiInitialized() {
-    if (_ffiInitialized) return;
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-    }
-    _ffiInitialized = true;
-  }
+ static Database? _database;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -37,7 +22,16 @@ static Database? _database;
   }
 
   Future<Database> _initDatabase() async {
-    _ensureFfiInitialized();
+    final directory = await getApplicationDocumentsDirectory();
+    final path = join(directory.path, 'zad_pos.db');
+
+    return await openDatabase(
+      path,
+      version: 4,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
+  }
 
     final directory = await getApplicationDocumentsDirectory();
     final path = join(directory.path, 'zad_pos.db');
