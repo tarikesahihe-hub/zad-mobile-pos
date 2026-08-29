@@ -27,7 +27,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -324,6 +324,9 @@ class DatabaseService {
           created_at TEXT NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 5) {
+      await _createCashSessionTables(db);
     }
   }
 
