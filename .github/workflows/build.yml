@@ -1,12 +1,12 @@
-name: Build Android APK
+name: Build Android APK and Windows EXE
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feature/windows-support ]
   workflow_dispatch:
 
 jobs:
-  build:
+  build-android:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -43,3 +43,37 @@ jobs:
         with:
           name: app-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+  # ------------------------------------------------------------------
+  # تجريبي: بناء Windows بلا أي تعديل فـ الكود بعد — الهدف نشوف الأخطاء
+  # الحقيقية اللي غادي تطلع (حزم غير متوافقة) قبل ما نصلحهم واحد واحد.
+  # continue-on-error يخلي فشل هاذ الـ job ما يوقفش/يفشلش الـ workflow كامل.
+  # ------------------------------------------------------------------
+  build-windows:
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+
+      - name: Enable Windows desktop support
+        run: flutter config --enable-windows-desktop
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build Windows EXE
+        run: flutter build windows --release
+
+      - name: Upload Windows Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zad-pos-windows
+          path: build/windows/x64/runner/Release/**
