@@ -326,6 +326,41 @@ class DatabaseService {
       ''');
     }
     if (oldVersion < 5) {
+      Future<void> _createCashSessionTables(Database db) async {
+    // جلسات الصندوق: كل مستخدم عندو رصيد مستقل — يفتح جلسة برصيد ابتدائي،
+    // ويغلقها بإدخال الرصيد الفعلي، والنظام يحسب الفرق تلقائياً مقارنة
+    // بالرصيد "المتوقع" (ابتدائي + كل الحركات المسجلة فـ هاذ الجلسة).
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS cash_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        opening_amount REAL NOT NULL DEFAULT 0,
+        closing_amount REAL,
+        expected_amount REAL,
+        difference REAL,
+        status TEXT NOT NULL DEFAULT 'open',
+        opened_at TEXT NOT NULL,
+        closed_at TEXT,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    ''');
+
+    // حركات الصندوق: كل دخول/خروج فلوس مربوط بجلسة، مصنف حسب النوع
+    // (sale, expense, deposit, withdrawal, customer_payment...) باش نقدرو
+    // نحسبو الرصيد المتوقع بدقة عند الإغلاق.
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS cash_movements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        amount REAL NOT NULL,
+        reference_id INTEGER,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (session_id) REFERENCES cash_sessions (id)
+      )
+    ''');
+      }
       await _createCashSessionTables(db);
     }
   }
