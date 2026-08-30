@@ -93,6 +93,11 @@ class LicenseService {
       if (Platform.isAndroid) {
         final info = await deviceInfo.androidInfo;
         raw = '${info.id}-${info.board}-${info.brand}-${info.device}';
+      } else if (Platform.isWindows) {
+        final info = await deviceInfo.windowsInfo;
+        // deviceId هو GUID فريد ومستقر لكل جهاز Windows (من الريجستري)،
+        // مناسب كأساس لبصمة جهاز فريدة، بلا حاجة لمعلومات إضافية.
+        raw = 'windows-${info.deviceId}';
       } else {
         raw = 'unknown-platform';
       }
