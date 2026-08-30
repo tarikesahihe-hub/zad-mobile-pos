@@ -1013,6 +1013,11 @@ class DatabaseService {
           await txn.insert(table, record, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
+    });
+  }
+
+  // ========== CLOSE ==========
+  Future<void> close() async {
     final db = await database;
     await db.close();
     _database = null;
@@ -1135,8 +1140,6 @@ class DatabaseService {
       orderBy: 'opened_at DESC',
       limit: limit,
     );
-  }
-                         }
   }
 
   // ========== CLOSE ==========
