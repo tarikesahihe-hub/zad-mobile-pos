@@ -32,6 +32,25 @@ jobs:
           curl -sSL -o android/gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.14.0/gradle/wrapper/gradle-wrapper.jar
           chmod +x android/gradlew
 
+      # ------------------------------------------------------------------
+      # نستعيد ملف الـ keystore الحقيقي من GitHub Secret (base64)، ونولد
+      # keystore.properties باش Gradle يقدر يوقع الـ APK بمفتاح release
+      # خاص، بدل مفتاح debug العام. الملفات هاذي ما تتكوميتاش للريبو أبداً
+      # (موجودة غير مؤقتاً على الـ runner، وتنمحى بعد ما البناء يخلص).
+      # ------------------------------------------------------------------
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/zad-release-key.jks
+
+      - name: Create keystore.properties
+        run: |
+          cat > android/keystore.properties << EOF
+          storeFile=zad-release-key.jks
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          EOF
+
       - name: Get dependencies
         run: flutter pub get
 
