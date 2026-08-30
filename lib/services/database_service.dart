@@ -328,7 +328,11 @@ class DatabaseService {
       ''');
     }
     if (oldVersion < 5) {
-      Future<void> _createCashSessionTables(Database db) async {
+      await _createCashSessionTables(db);
+    }
+  }
+
+  Future<void> _createCashSessionTables(Database db) async {
     // جلسات الصندوق: كل مستخدم عندو رصيد مستقل — يفتح جلسة برصيد ابتدائي،
     // ويغلقها بإدخال الرصيد الفعلي، والنظام يحسب الفرق تلقائياً مقارنة
     // بالرصيد "المتوقع" (ابتدائي + كل الحركات المسجلة فـ هاذ الجلسة).
@@ -362,9 +366,6 @@ class DatabaseService {
         FOREIGN KEY (session_id) REFERENCES cash_sessions (id)
       )
     ''');
-      }
-      await _createCashSessionTables(db);
-    }
   }
 
   Future<void> _insertDefaultPermissions(Database db) async {
