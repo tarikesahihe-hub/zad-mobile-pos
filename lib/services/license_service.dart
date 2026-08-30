@@ -86,13 +86,16 @@ class LicenseService {
   // ---------------------------------------------------------------------
 
   /// Full precision fingerprint — used for subscription (server-side) binding.
-  Future<String> getDeviceFingerprint() async {
+Future<String> getDeviceFingerprint() async {
     try {
       final deviceInfo = DeviceInfoPlugin();
       String raw;
       if (Platform.isAndroid) {
         final info = await deviceInfo.androidInfo;
         raw = '${info.id}-${info.board}-${info.brand}-${info.device}';
+      } else if (Platform.isWindows) {
+        final info = await deviceInfo.windowsInfo;
+        raw = 'windows-${info.deviceId}';
       } else {
         raw = 'unknown-platform';
       }
@@ -101,7 +104,6 @@ class LicenseService {
       return sha256.convert(utf8.encode('fallback-device-error')).toString();
     }
   }
-
   /// Short, human-typeable code shown to the customer, who sends it to you
   /// so you can generate their lifetime key with the offline script.
   /// Deterministic from the same device info as the full fingerprint.
