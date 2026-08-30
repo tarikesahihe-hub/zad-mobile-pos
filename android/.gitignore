@@ -1,0 +1,4 @@
+keystore.properties
+app/zad-release-key.jks
+*.jks
+*.keystore
