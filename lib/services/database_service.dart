@@ -258,6 +258,8 @@ class DatabaseService {
 
     // Insert default permissions
     await _insertDefaultPermissions(db);
+
+    await _createCashSessionTables(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
