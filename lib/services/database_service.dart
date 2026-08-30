@@ -1013,7 +1013,130 @@ class DatabaseService {
           await txn.insert(table, record, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
+    final db = await database;
+    await db.close();
+    _database = null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Cash Sessions (جلسات الصندوق)
+  // ---------------------------------------------------------------------
+
+  Future<Map<String, dynamic>?> getOpenCashSession(int userId) async {
+    final db = await database;
+    final maps = await db.query(
+      'cash_sessions',
+      where: 'user_id = ? AND status = ?',
+      whereArgs: [userId, 'open'],
+      orderBy: 'opened_at DESC',
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return maps.first;
+  }
+
+  Future<int> openCashSession({
+    required int userId,
+    required double openingAmount,
+  }) async {
+    final db = await database;
+    return await db.insert('cash_sessions', {
+      'user_id': userId,
+      'opening_amount': openingAmount,
+      'status': 'open',
+      'opened_at': DateTime.now().toIso8601String(),
     });
+  }
+
+  Future<void> addCashMovement({
+    required int sessionId,
+    required String type,
+    required double amount,
+    int? referenceId,
+    String? notes,
+  }) async {
+    final db = await database;
+    await db.insert('cash_movements', {
+      'session_id': sessionId,
+      'type': type,
+      'amount': amount,
+      'reference_id': referenceId,
+      'notes': notes,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<double> getSessionMovementsTotal(int sessionId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COALESCE(SUM(amount), 0) as total FROM cash_movements WHERE session_id = ?',
+      [sessionId],
+    );
+    final value = result.first['total'];
+    return (value is int) ? value.toDouble() : (value as double? ?? 0.0);
+  }
+
+  Future<List<Map<String, dynamic>>> getSessionMovements(int sessionId) async {
+    final db = await database;
+    return await db.query(
+      'cash_movements',
+      where: 'session_id = ?',
+      whereArgs: [sessionId],
+      orderBy: 'created_at DESC',
+    );
+  }
+
+  Future<Map<String, dynamic>> closeCashSession({
+    required int sessionId,
+    required double closingAmount,
+  }) async {
+    final db = await database;
+
+    final sessionMaps = await db.query(
+      'cash_sessions',
+      where: 'id = ?',
+      whereArgs: [sessionId],
+      limit: 1,
+    );
+    if (sessionMaps.isEmpty) {
+      throw Exception('الجلسة غير موجودة');
+    }
+    final openingAmount = (sessionMaps.first['opening_amount'] as num).toDouble();
+    final movementsTotal = await getSessionMovementsTotal(sessionId);
+    final expectedAmount = openingAmount + movementsTotal;
+    final difference = closingAmount - expectedAmount;
+
+    await db.update(
+      'cash_sessions',
+      {
+        'closing_amount': closingAmount,
+        'expected_amount': expectedAmount,
+        'difference': difference,
+        'status': 'closed',
+        'closed_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [sessionId],
+    );
+
+    return {
+      'expected_amount': expectedAmount,
+      'closing_amount': closingAmount,
+      'difference': difference,
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> getCashSessionsHistory(int userId, {int limit = 50}) async {
+    final db = await database;
+    return await db.query(
+      'cash_sessions',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'opened_at DESC',
+      limit: limit,
+    );
+  }
+                         }
   }
 
   // ========== CLOSE ==========
