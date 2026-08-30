@@ -65,11 +65,25 @@ class LicenseService {
   // offline key-generator script (tools/generate_lifetime_key.js) that
   // produces lifetime keys for customers. If you change one, change both,
   // or every previously-sold lifetime key stops validating.
-  static const String _hmacSecret = 'ZAD-DZ-2026-8f3K9pQ2mN7vR4xL-LIFETIME-SECRET';
+// السر مقسم لأجزاء ومخلوط بترتيب غير متسلسل، باش صعب يتقرا مباشرة من
+  // strings الملف المصرف. يتجمع فقط وقت الاستعمال عبر _assembleLifetimeSecret().
+  static const List<String> _hmacSecretParts = [
+    '8f3K9pQ2mN7vR4xL',
+    'ZAD-DZ-2026-',
+    '-LIFETIME-SECRET',
+  ];
+  static String get _hmacSecret =>
+      '${_hmacSecretParts[1]}${_hmacSecretParts[0]}${_hmacSecretParts[2]}';
 
   // ⚠️ Same rule as above but for secondary/dependent device keys — must
   // match tools/generate_secondary_key.js exactly.
-  static const String _secondaryHmacSecret = 'ZAD-DZ-2026-SECONDARY-7hT4nQ1xP9mK-DEVICE-SECRET';
+  static const List<String> _secondaryHmacSecretParts = [
+    '7hT4nQ1xP9mK',
+    'ZAD-DZ-2026-SECONDARY-',
+    '-DEVICE-SECRET',
+  ];
+  static String get _secondaryHmacSecret =>
+      '${_secondaryHmacSecretParts[1]}${_secondaryHmacSecretParts[0]}${_secondaryHmacSecretParts[2]}';
 
   static const _kInstallDate = 'zad_install_date';
   static const _kLifetimeActive = 'zad_lifetime_active';
