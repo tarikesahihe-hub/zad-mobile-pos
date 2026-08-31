@@ -6,6 +6,8 @@ import '../../providers/pos_provider.dart';
 import '../../providers/inventory_provider.dart';
 import '../../providers/customer_provider.dart';
 import '../../providers/app_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/cash_session_provider.dart';
 import '../../models/product.dart';
 import '../../models/customer.dart';
 import '../../l10n/app_strings.dart';
@@ -22,6 +24,17 @@ class PosScreen extends StatefulWidget {
 
 class _PosScreenState extends State<PosScreen> {
   final AudioPlayer _completionPlayer = AudioPlayer();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userId = context.read<AuthProvider>().currentUser?.id;
+      if (userId != null) {
+        context.read<CashSessionProvider>().checkOpenSession(userId);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -527,6 +540,130 @@ class _PosScreenState extends State<PosScreen> {
                       final sale = await pos.checkout();
                       if (mounted && sale != null) {
                         _playSaleCompleteSound();
+                        Future<void> _playSaleCompleteSound() async {
+    try {
+      await _completionPlayer.stop();
+      await _completionPlayer.play(AssetSource('sounds/sale_complete.mp3'));
+    } catch (_) {
+      // Silent failure — the sale itself already succeeded, don't block on audio.
+    }
+  }
+
+  void _showOpenCashSessionDialog(CashSessionProvider cashSession) {
+    final controller = TextEditingController(text: '0');
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('فتح جلسة الصندوق'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'الرصيد الابتدائي',
+            prefixIcon: Icon(Icons.money),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final amount = double.tryParse(controller.text) ?? 0;
+              final userId = context.read<AuthProvider>().currentUser?.id;
+              if (userId == null) return;
+              final success = await cashSession.openNewSession(
+                userId: userId,
+                openingAmount: amount,
+              );
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+              if (success && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('✓ تم فتح جلسة الصندوق')),
+                );
+              }
+            },
+            child: const Text('فتح الجلسة'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCloseCashSessionDialog(CashSessionProvider cashSession) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('غلق جلسة الصندوق'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'الرصيد المتوقع: ${cashSession.expectedAmountSoFar.toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'الرصيد الفعلي (بعد العد)',
+                prefixIcon: Icon(Icons.money),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final actual = double.tryParse(controller.text);
+              if (actual == null) return;
+              final result = await cashSession.closeCurrentSession(
+                closingAmount: actual,
+              );
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+              if (result != null && mounted) {
+                final diff = result['difference'] as double;
+                final diffText = diff == 0
+                    ? 'الصندوق مطابق تماماً ✓'
+                    : diff > 0
+                        ? 'زيادة: +${diff.toStringAsFixed(2)}'
+                        : 'نقص: ${diff.toStringAsFixed(2)}';
+                showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: const Text('نتيجة غلق الصندوق'),
+                    content: Text(
+                      'المتوقع: ${(result['expected_amount'] as double).toStringAsFixed(2)}\n'
+                      'الفعلي: ${(result['closing_amount'] as double).toStringAsFixed(2)}\n\n'
+                      '$diffText',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('حسناً'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            },
+            child: const Text('غلق الجلسة'),
+          ),
+        ],
+      ),
+    );
+  }
                         if (localPaymentMethod == 'credit' && selectedCustomer != null) {
                           await context.read<CustomerProvider>().loadCustomers();
                         }
@@ -553,6 +690,30 @@ class _PosScreenState extends State<PosScreen> {
       appBar: AppBar(
         title: Text(AppStrings.get(context, 'pos_title')),
         actions: [
+          Consumer<CashSessionProvider>(
+            builder: (context, cashSession, _) {
+              final isOpen = cashSession.hasOpenSession;
+              return TextButton.icon(
+                onPressed: () => isOpen
+                    ? _showCloseCashSessionDialog(cashSession)
+                    : _showOpenCashSessionDialog(cashSession),
+                icon: Icon(
+                  isOpen ? Icons.lock_open : Icons.lock_outline,
+                  color: isOpen ? Colors.greenAccent : Colors.white70,
+                  size: 20,
+                ),
+                label: Text(
+                  isOpen
+                      ? '${cashSession.expectedAmountSoFar.toStringAsFixed(0)}'
+                      : 'فتح الصندوق',
+                  style: TextStyle(
+                    color: isOpen ? Colors.greenAccent : Colors.white70,
+                    fontSize: 13,
+                  ),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.receipt_long),
             tooltip: AppStrings.get(context, 'pos_invoices_tooltip'),
