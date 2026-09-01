@@ -26,17 +26,6 @@ class _PosScreenState extends State<PosScreen> {
   final AudioPlayer _completionPlayer = AudioPlayer();
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final userId = context.read<AuthProvider>().currentUser?.id;
-      if (userId != null) {
-        context.read<CashSessionProvider>().checkOpenSession(userId);
-      }
-    });
-  }
-
-  @override
   void dispose() {
     _completionPlayer.dispose();
     super.dispose();
@@ -89,6 +78,10 @@ class _PosScreenState extends State<PosScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<InventoryProvider>().loadProducts();
+      final userId = context.read<AuthProvider>().currentUser?.id;
+      if (userId != null) {
+        context.read<CashSessionProvider>().checkOpenSession(userId);
+      }
     });
   }
 
@@ -540,13 +533,24 @@ class _PosScreenState extends State<PosScreen> {
                       final sale = await pos.checkout();
                       if (mounted && sale != null) {
                         _playSaleCompleteSound();
-                        Future<void> _playSaleCompleteSound() async {
-    try {
-      await _completionPlayer.stop();
-      await _completionPlayer.play(AssetSource('sounds/sale_complete.mp3'));
-    } catch (_) {
-      // Silent failure — the sale itself already succeeded, don't block on audio.
-    }
+                        if (localPaymentMethod == 'credit' && selectedCustomer != null) {
+                          await context.read<CustomerProvider>().loadCustomers();
+                        }
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => SaleReceiptScreen(sale: sale),
+                          ),
+                        );
+                      }
+                    },
+              child: Text(AppStrings.get(context, 'common_confirm')),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showOpenCashSessionDialog(CashSessionProvider cashSession) {
@@ -661,25 +665,6 @@ class _PosScreenState extends State<PosScreen> {
             child: const Text('غلق الجلسة'),
           ),
         ],
-      ),
-    );
-  }
-                        if (localPaymentMethod == 'credit' && selectedCustomer != null) {
-                          await context.read<CustomerProvider>().loadCustomers();
-                        }
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => SaleReceiptScreen(sale: sale),
-                          ),
-                        );
-                      }
-                    },
-              child: Text(AppStrings.get(context, 'common_confirm')),
-            ),
-          ],
-        ),
       ),
     );
   }
