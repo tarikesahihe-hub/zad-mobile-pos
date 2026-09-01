@@ -49,7 +49,7 @@ class LicenseService {
 
   final _storage = const FlutterSecureStorage();
 
-  static const int trialDays = 7;
+static const int trialDays = 3;
   // Subscription must reach the server at least once every N days, or it
   // locks pending re-connection (this is what makes the annual plan
   // "بالنت" as opposed to the lifetime key which never needs it again).
