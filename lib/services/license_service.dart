@@ -49,7 +49,7 @@ class LicenseService {
 
   final _storage = const FlutterSecureStorage();
 
-  static const int trialDays = 7;
+static const int trialDays = 3;
   // Subscription must reach the server at least once every N days, or it
   // locks pending re-connection (this is what makes the annual plan
   // "بالنت" as opposed to the lifetime key which never needs it again).
@@ -65,8 +65,8 @@ class LicenseService {
   // offline key-generator script (tools/generate_lifetime_key.js) that
   // produces lifetime keys for customers. If you change one, change both,
   // or every previously-sold lifetime key stops validating.
-  // السر مقسم لأجزاء ومخلوط بترتيب غير متسلسل، باش صعب يتقرا مباشرة من
-  // strings الملف المصرف. يتجمع فقط وقت الاستعمال عبر getter أسفله.
+// السر مقسم لأجزاء ومخلوط بترتيب غير متسلسل، باش صعب يتقرا مباشرة من
+  // strings الملف المصرف. يتجمع فقط وقت الاستعمال عبر _assembleLifetimeSecret().
   static const List<String> _hmacSecretParts = [
     '8f3K9pQ2mN7vR4xL',
     'ZAD-DZ-2026-',
@@ -109,6 +109,11 @@ Future<String> getDeviceFingerprint() async {
         raw = '${info.id}-${info.board}-${info.brand}-${info.device}';
       } else if (Platform.isWindows) {
         final info = await deviceInfo.windowsInfo;
+<<<<<<< HEAD
+=======
+        // deviceId هو GUID فريد ومستقر لكل جهاز Windows (من الريجستري)،
+        // مناسب كأساس لبصمة جهاز فريدة، بلا حاجة لمعلومات إضافية.
+>>>>>>> origin/main
         raw = 'windows-${info.deviceId}';
       } else {
         raw = 'unknown-platform';
