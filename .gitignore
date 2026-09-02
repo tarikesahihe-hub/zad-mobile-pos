@@ -25,3 +25,4 @@ key.properties
 .DS_Store
 pubspec.lock
 keystore_base64.txt
+token.txt
