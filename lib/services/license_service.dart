@@ -109,11 +109,8 @@ Future<String> getDeviceFingerprint() async {
         raw = '${info.id}-${info.board}-${info.brand}-${info.device}';
       } else if (Platform.isWindows) {
         final info = await deviceInfo.windowsInfo;
-<<<<<<< HEAD
-=======
         // deviceId هو GUID فريد ومستقر لكل جهاز Windows (من الريجستري)،
         // مناسب كأساس لبصمة جهاز فريدة، بلا حاجة لمعلومات إضافية.
->>>>>>> origin/main
         raw = 'windows-${info.deviceId}';
       } else {
         raw = 'unknown-platform';
