@@ -167,9 +167,20 @@ Future<String> getDeviceFingerprint() async {
 
   int get secondaryDevicesRemaining => maxSecondaryDevices;
 
+  /// الحد الأقصى الفعلي للأجهزة الثانوية لهاذ التفعيل بالذات — يقرا من
+  /// التخزين المحلي (يتحدد وقت التفعيل حسب نوع المفتاح)، أو يرجع للقيمة
+  /// الافتراضية العامة (4) إذا ماكانش محدد (زبائن قدماء).
+  Future<int> effectiveSecondaryLimit() async {
+    final stored = await _storage.read(key: _kSecondaryLimit);
+    return int.tryParse(stored ?? '') ?? maxSecondaryDevices;
+  }
+
+  int get secondaryDevicesRemaining => maxSecondaryDevices;
+
   Future<int> secondaryDevicesRemainingCount() async {
     final used = await secondaryDevicesUsed();
-    final remaining = maxSecondaryDevices - used;
+    final limit = await effectiveSecondaryLimit();
+    final remaining = limit - used;
     return remaining < 0 ? 0 : remaining;
   }
 
