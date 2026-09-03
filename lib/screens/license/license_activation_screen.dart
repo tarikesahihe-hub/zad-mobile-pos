@@ -183,42 +183,18 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
   }
 
   Widget _buildDeviceCodeBox() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        children: [
-          const Text('رمز الجهاز', style: TextStyle(fontSize: 12, color: Colors.black54)),
-          const SizedBox(height: 4),
-          Text(
-            _deviceCode ?? '...جاري التحميل',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
-            ),
+    return Column(
+      children: [
+        Text(
+          'للتفعيل تواصل معنا: +213670694322',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade600,
           ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: _deviceCode == null ? null : () async {
-                    try {
-                      await Clipboard.setData(ClipboardData(text: _deviceCode!));
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نسخ رمز الجهاز')));
-                    } catch (e) {
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('فشل النسخ: ' + e.toString())));
-                    }
-                  },
-            icon: const Icon(Icons.copy, size: 18),
-            label: const Text('نسخ الرمز'),
-          ),
-        ],
-      ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 
