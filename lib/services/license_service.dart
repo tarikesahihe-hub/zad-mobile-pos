@@ -165,8 +165,6 @@ Future<String> getDeviceFingerprint() async {
     return int.tryParse(raw ?? '0') ?? 0;
   }
 
-  int get secondaryDevicesRemaining => maxSecondaryDevices;
-
   /// الحد الأقصى الفعلي للأجهزة الثانوية لهاذ التفعيل بالذات — يقرا من
   /// التخزين المحلي (يتحدد وقت التفعيل حسب نوع المفتاح)، أو يرجع للقيمة
   /// الافتراضية العامة (4) إذا ماكانش محدد (زبائن قدماء).
