@@ -396,6 +396,55 @@ Future<String> getDeviceFingerprint() async {
     }
   }
 
+  /// يتحقق من صيغة وتوقيع مفتاح عام (بلا رمز جهاز) — ZAD-AND-xxxx أو
+  /// ZAD-WIN-xxxx. يرجع الحد الأقصى للأجهزة الثانوية إذا صحيح، أو null.
+  int? _validateGenericKey(String enteredKey) {
+    final key = enteredKey.trim().toUpperCase();
+    String? secret;
+    int? limit;
+
+    if (key.startsWith('ZAD-AND-')) {
+      secret = _genericAndroidSecret;
+      limit = 1;
+    } else if (key.startsWith('ZAD-WIN-')) {
+      secret = _genericWindowsSecret;
+      limit = 2;
+    } else {
+      return null;
+    }
+
+    final parts = key.split('-');
+    if (parts.length != 7) return null;
+
+    final serial = parts.sublist(2, 6).join('');
+    final providedChecksum = parts[6];
+
+    final hmac = Hmac(sha256, utf8.encode(secret));
+    final digest = hmac.convert(utf8.encode(serial));
+    final expectedChecksum = digest.toString().substring(0, 8).toUpperCase();
+
+    return providedChecksum == expectedChecksum ? limit : null;
+  }
+
+  /// يفعّل مفتاح عام (بلا رمز جهاز مسبقاً) — أول جهاز يدخلو يولي رئيسي،
+  /// والحد الأقصى للأجهزة الثانوية يتحدد حسب نوع المفتاح (Android/Windows).
+  Future<String?> activateGenericKey(String enteredKey, {String? managerName}) async {
+    try {
+      final limit = _validateGenericKey(enteredKey);
+      if (limit == null) {
+        return 'مفتاح الترخيص غير صحيح.';
+      }
+      await _storage.write(key: _kLifetimeActive, value: 'true');
+      await _storage.write(key: _kSecondaryLimit, value: '$limit');
+      if (managerName != null && managerName.trim().isNotEmpty) {
+        await setManagerName(managerName);
+      }
+      return null;
+    } catch (e) {
+      return 'خطأ أثناء التفعيل: $e';
+    }
+  }
+
   Future<bool> _isLifetimeActive() async {
     return await _storage.read(key: _kLifetimeActive) == 'true';
   }
