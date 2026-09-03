@@ -219,8 +219,9 @@ Future<String> getDeviceFingerprint() async {
     }
 
     final used = await secondaryDevicesUsed();
-    if (used >= maxSecondaryDevices) {
-      throw Exception('تم استنفاد كل الرخص الثانوية ($maxSecondaryDevices/$maxSecondaryDevices)');
+    final limit = await effectiveSecondaryLimit();
+    if (used >= limit) {
+      throw Exception('تم استنفاد كل الرخص الثانوية ($used/$limit)');
     }
 
     roster.add(SecondaryDeviceRecord(
