@@ -59,8 +59,17 @@ static const int trialDays = 3;
   // This is a permanent budget — deleting a device from the local roster
   // (for organizational purposes) does NOT free up a seat. This is
   // intentional and matches how the business wants licenses to work.
+  // القيمة الافتراضية للزبائن القدماء (مفاتيح ZAD-LIFE- المرتبطة برمز جهاز).
   static const int maxSecondaryDevices = 4;
 
+  static const _kSecondaryLimit = 'zad_secondary_limit';
+
+  // الأسرار الخاصة بالمفاتيح العامة الجديدة (بلا رمز جهاز مسبقاً) — لازم
+  // تبقى مطابقة تماماً لـ tools/generate_batch_keys.js.
+  static const String _genericAndroidSecret =
+      'ZAD-DZ-2026-GENERIC-ANDROID-4mK7pL2xQ9-BATCH-SECRET';
+  static const String _genericWindowsSecret =
+      'ZAD-DZ-2026-GENERIC-WINDOWS-9xR3nT6vB1-BATCH-SECRET';
   // ⚠️ IMPORTANT: this secret must be IDENTICAL to the one used in the
   // offline key-generator script (tools/generate_lifetime_key.js) that
   // produces lifetime keys for customers. If you change one, change both,
