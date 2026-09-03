@@ -128,14 +128,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildSupportSection() {
-    return Card(
-      margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-      child: ListTile(
-        leading: const Icon(Icons.support_agent, color: Color(0xFF1E88E5)),
-        title: Text(AppStrings.get(context, 'set_support_title')),
-        subtitle: Text(AppStrings.get(context, 'set_support_subtitle')),
-        trailing: const Icon(Icons.open_in_new),
-        onTap: _openSupportLink,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Text(
+        'الدعم التقني: +213670694322',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w400,
+          color: Colors.grey.shade600,
+        ),
+        textAlign: TextAlign.center,
       ),
     );
   }
