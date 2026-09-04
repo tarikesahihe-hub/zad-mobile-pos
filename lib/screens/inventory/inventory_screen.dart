@@ -121,8 +121,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ),
       );
     }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-    }
   }
 
   void _showImportErrorsDialog(List<String> errors) {
