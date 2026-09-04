@@ -74,10 +74,23 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
       _loading = true;
       _error = null;
     });
-    final error = await LicenseService().activateLifetime(
-      _lifetimeKeyController.text,
-      managerName: _lifetimeManagerController.text,
-    );
+    final enteredKey = _lifetimeKeyController.text.trim().toUpperCase();
+    final managerName = _lifetimeManagerController.text;
+    String? error;
+
+    // إذا المفتاح من النوع العام الجديد (بلا رمز جهاز مسبقاً)، نستعمل
+    // مسار التفعيل الجديد. وإلا، نرجع للنظام القديم (رمز جهاز مرتبط).
+    if (enteredKey.startsWith('ZAD-AND-') || enteredKey.startsWith('ZAD-WIN-')) {
+      error = await LicenseService().activateGenericKey(
+        enteredKey,
+        managerName: managerName,
+      );
+    } else {
+      error = await LicenseService().activateLifetime(
+        enteredKey,
+        managerName: managerName,
+      );
+    }
     _handleActivationResult(error);
   }
 
