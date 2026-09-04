@@ -97,10 +97,30 @@ class _InventoryScreenState extends State<InventoryScreen> {
           SnackBar(content: Text(AppStrings.get(context, 'inv_import_no_valid_rows'))),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!mounted) return;
       setState(() => _importing = false);
-      final msg = AppStrings.get(context, 'inv_import_error').replaceAll('{error}', '$e');
+      debugPrint('IMPORT ERROR: $e');
+      debugPrint('STACK: $stackTrace');
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('تفاصيل خطأ الاستيراد'),
+          content: SingleChildScrollView(
+            child: SelectableText(
+              'ERROR: $e\n\nSTACK:\n$stackTrace',
+              style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('حسناً'),
+            ),
+          ],
+        ),
+      );
+    }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
