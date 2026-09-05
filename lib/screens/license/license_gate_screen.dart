@@ -33,6 +33,7 @@ class _LicenseGateScreenState extends State<LicenseGateScreen> {
       case LicenseState.trial:
       case LicenseState.lifetimeActive:
       case LicenseState.secondaryActive:
+      case LicenseState.genericActive:
       case LicenseState.subscriptionActive:
       case LicenseState.subscriptionGrace:
         Navigator.of(context).pushReplacement(
