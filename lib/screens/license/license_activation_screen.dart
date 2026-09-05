@@ -18,6 +18,7 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
   final _lifetimeManagerController = TextEditingController();
   final _secondaryKeyController = TextEditingController();
   final _secondaryManagerController = TextEditingController();
+  final _genericKeyController = TextEditingController();
 
   String? _deviceCode;
   bool _loading = false;
@@ -77,6 +78,21 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
     final error = await LicenseService().activateLifetime(
       _lifetimeKeyController.text,
       managerName: _lifetimeManagerController.text,
+    );
+    _handleActivationResult(error);
+  }
+
+  Future<void> _activateGeneric() async {
+    if (_genericKeyController.text.trim().isEmpty) {
+      setState(() => _error = 'أدخل مفتاح الترخيص أولاً');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final error = await LicenseService().activateGenericKey(
+      _genericKeyController.text,
     );
     _handleActivationResult(error);
   }
@@ -251,6 +267,38 @@ class _LicenseActivationScreenState extends State<LicenseActivationScreen>
               : const Text('تفعيل مدى الحياة'),
         ),
       ),
+      const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 12),
+              const Text(
+                'أو أدخل مفتاح ترخيص جديد (يُفعَّل عبر الإنترنت)',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.black54, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _genericKeyController,
+                textAlign: TextAlign.center,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(
+                  labelText: 'مفتاح الترخيص الجديد',
+                  hintText: 'ZAD-AND-XXXXXX-0',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _loading ? null : _activateGeneric,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E7D32),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('تفعيل المفتاح الجديد'),
+                ),
+              ),
     ]);
   }
 
