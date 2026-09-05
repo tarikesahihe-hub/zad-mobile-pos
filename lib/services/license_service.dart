@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -12,6 +13,7 @@ enum LicenseState {
   trialExpired,       // trial over, nothing activated yet
   lifetimeActive,      // permanently activated offline (HMAC key)
   secondaryActive,     // secondary device activated offline (HMAC key)
+  genericActive,       // generic key activated via Firestore
   subscriptionActive,  // annual subscription, verified within grace period
   subscriptionGrace,   // subscription active but hasn't reached server in a while — still usable, warns user
   subscriptionLocked,  // subscription grace period exceeded — must connect to renew
@@ -508,6 +510,91 @@ static const int trialDays = 3;
   }
 
   // ---------------------------------------------------------------------
+  // Generic key activation (Firestore-backed, one device per key)
+  // ---------------------------------------------------------------------
+  //
+  // Unlike the offline lifetime/secondary keys above, generic keys are
+  // validated against Cloud Firestore. Each key document represents
+  // exactly one device slot (maxDevices is always 1). Firestore Security
+  // Rules enforce that a key can only move from "unused" to "active" once,
+  // and that devices/usedCount cannot be tampered with from the client —
+  // see firestore.rules for the actual enforcement.
+
+  static const _kGenericActive = 'zad_generic_active';
+  static const _kGenericKeyId = 'zad_generic_key_id';
+
+  Future<bool> _isGenericActive() async {
+    return await _storage.read(key: _kGenericActive) == 'true';
+  }
+
+  /// Validates and activates a generic key against Firestore. Returns null
+  /// on success, or a user-facing Arabic error message on failure.
+  Future<String?> activateGenericKey(String enteredKey) async {
+    final normalizedKey = enteredKey.trim().toUpperCase();
+    if (normalizedKey.isEmpty) {
+      return 'الرجاء إدخال مفتاح الترخيص';
+    }
+
+    try {
+      final docRef =
+          FirebaseFirestore.instance.collection('license_keys').doc(normalizedKey);
+      final snapshot = await docRef.get();
+
+      if (!snapshot.exists) {
+        return 'مفتاح الترخيص غير موجود. تأكد من كتابته بشكل صحيح';
+      }
+
+      final data = snapshot.data()!;
+      final keyPlatform = data['platform'] as String?;
+      final status = data['status'] as String?;
+
+      final currentPlatform = Platform.isWindows ? 'windows' : 'android';
+      if (keyPlatform != currentPlatform) {
+        return 'هذا المفتاح مخصص لمنصة أخرى (${keyPlatform ?? "غير معروف"})';
+      }
+
+      final deviceCode = await getDeviceCode();
+
+      if (status == 'active') {
+        final devices = (data['devices'] as List<dynamic>?) ?? [];
+        if (devices.contains(deviceCode)) {
+          // Same device re-activating (e.g. after reinstall) — allow it
+          // locally without touching Firestore again.
+          await _storage.write(key: _kGenericActive, value: 'true');
+          await _storage.write(key: _kGenericKeyId, value: normalizedKey);
+          return null;
+        }
+        return 'هذا المفتاح مستعمل من جهاز آخر. تواصل مع الدعم إذا كنت تعتقد أن هذا خطأ';
+      }
+
+      if (status != 'unused') {
+        return 'هذا المفتاح غير صالح للاستعمال (الحالة: ${status ?? "غير معروفة"})';
+      }
+
+      // status == 'unused' — first activation, write through the
+      // Security-Rules-enforced transition to 'active'.
+      await docRef.update({
+        'status': 'active',
+        'usedCount': 1,
+        'devices': [deviceCode],
+      });
+
+      await _storage.write(key: _kGenericActive, value: 'true');
+      await _storage.write(key: _kGenericKeyId, value: normalizedKey);
+      return null;
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        return 'تعذر تفعيل المفتاح (رُفض من الخادم). قد يكون المفتاح مستعملاً بالفعل';
+      }
+      return 'خطأ في الاتصال بخادم التراخيص: ${e.message}';
+    } on SocketException {
+      return 'تفعيل هذا المفتاح يحتاج اتصال بالإنترنت. تأكد من الشبكة وحاول مرة أخرى';
+    } catch (e) {
+      return 'خطأ غير متوقع أثناء التفعيل: $e';
+    }
+  }
+
+  // ---------------------------------------------------------------------
   // Overall state — this is what the UI should branch on
   // ---------------------------------------------------------------------
 
@@ -518,6 +605,10 @@ static const int trialDays = 3;
 
     if (await _isSecondaryActive()) {
       return LicenseState.secondaryActive;
+    }
+
+    if (await _isGenericActive()) {
+      return LicenseState.genericActive;
     }
 
     if (await _hasSubscriptionToken()) {
@@ -554,6 +645,7 @@ static const int trialDays = 3;
   Future<void> clearAll() async {
     await _storage.delete(key: _kLifetimeActive);
     await _storage.delete(key: _kSecondaryActive);
+    await _storage.delete(key: _kGenericActive);
     await _storage.delete(key: _kSubToken);
     await _storage.delete(key: _kSubExpiresAt);
     await _storage.delete(key: _kSubLastVerified);
