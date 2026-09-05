@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "429201087461",
+    "project_id": "zad-pos",
+    "storage_bucket": "zad-pos.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:429201087461:android:47daa3873c60310e98ed0c",
+        "android_client_info": {
+          "package_name": "com.zad.pos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDuBe9s0wV-TAJxHYJ9DxyfYFJjnXDYfE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
